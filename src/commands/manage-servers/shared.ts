@@ -1,5 +1,5 @@
-import type { ServerConfig } from "../config.js";
-import { promptText } from "../cli.js";
+import type { ServerConfig } from "../../config.js";
+import { promptText } from "../../cli.js";
 
 export async function promptServerFields(
   defaults?: ServerConfig
@@ -22,7 +22,7 @@ export async function promptServerFields(
   });
   const flag = await promptText({
     message: "Server flag",
-    placeholder: "🌍",
+    placeholder: "Country flag",
     defaultValue: isEditing ? undefined : defaultFlag,
     initialValue: isEditing ? defaultFlag : undefined
   });

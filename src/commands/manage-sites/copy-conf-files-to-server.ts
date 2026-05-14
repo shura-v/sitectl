@@ -2,98 +2,18 @@ import { note, outro } from "@clack/prompts";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ensureDefaultDataFile, readDataText } from "../assets.js";
-import { isPromptCancelledError, promptSelect, promptText } from "../cli.js";
+import { ensureDefaultDataFile, readDataText } from "../../assets.js";
+import { promptSelect } from "../../cli.js";
 import {
-  createSiteDirectory,
   getSitesDirectoryPath,
   hasSiteConfig,
   listSiteNames,
   readSiteConfig
-} from "../sites.js";
-import { runForegroundCommand } from "./run-foreground-command.js";
-import { resolveServer } from "./server-target.js";
+} from "../../sites.js";
+import { runForegroundCommand } from "../utils/run-foreground-command.js";
+import { resolveServer } from "../utils/server-target.js";
 
-export async function runManageSitesCommand(): Promise<void> {
-  while (true) {
-    let action: "add-site" | "copy-conf-files-to-server" | "back";
-
-    try {
-      action = await promptSelect(
-        [
-          {
-            value: "add-site",
-            label: "Add site",
-            hint: "Create a site folder in the local nginx registry"
-          },
-          {
-            value: "copy-conf-files-to-server",
-            label: "Copy conf files to server",
-            hint: "Upload bootstrap + https nginx configs to a server"
-          },
-          {
-            value: "back",
-            label: "Back",
-            hint: "Return to the main menu"
-          }
-        ],
-        "Manage sites"
-      );
-    } catch (error) {
-      if (isPromptCancelledError(error)) {
-        return;
-      }
-
-      throw error;
-    }
-
-    if (action === "back") {
-      return;
-    }
-
-    try {
-      if (action === "add-site") {
-        await runAddSiteAction();
-        continue;
-      }
-
-      await runCopyConfFilesToServerAction();
-    } catch (error) {
-      if (isPromptCancelledError(error)) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
-}
-
-async function runAddSiteAction(): Promise<void> {
-  const siteName = await promptText({
-    message: "Site name",
-    placeholder: "example.com",
-    validate: (value) => {
-      if (value.length === 0) {
-        return "Site name is required.";
-      }
-
-      if (value === "." || value === "..") {
-        return "Site name must not be '.' or '..'.";
-      }
-
-      if (value.includes("/")) {
-        return "Site name must not contain '/'.";
-      }
-
-      return undefined;
-    }
-  });
-  const siteDirectoryPath = await createSiteDirectory(siteName);
-
-  outro(`Site folder created: ${siteDirectoryPath}`);
-}
-
-async function runCopyConfFilesToServerAction(): Promise<void> {
+export async function runCopyConfFilesToServerAction(): Promise<void> {
   const siteNames = await listSiteNames();
 
   if (siteNames.length === 0) {

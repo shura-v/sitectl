@@ -1,8 +1,9 @@
 {
   "name": "sitectl",
   "version": "0.1.0",
-  "private": true,
+  "author": "Shura Vlasov",
   "description": "CLI toolkit for site operations.",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "sitectl": "./dist/index.js"

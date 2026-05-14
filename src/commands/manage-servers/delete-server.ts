@@ -1,6 +1,7 @@
 import { outro } from "@clack/prompts";
-import { promptConfirm, promptSelect } from "../cli.js";
-import { getConfigPath, readConfig, writeConfig } from "../config.js";
+import { promptConfirm, promptSelect } from "../../cli.js";
+import { getConfigPath, readConfig, writeConfig } from "../../config.js";
+import { formatServerLabel } from "../utils/server-target.js";
 
 export async function runDeleteServerCommand(): Promise<void> {
   const config = await readConfig();
@@ -14,7 +15,15 @@ export async function runDeleteServerCommand(): Promise<void> {
   const name = await promptSelect(
     names.map((serverName) => ({
       value: serverName,
-      label: serverName
+      label: formatServerLabel(
+        serverName,
+        config.servers[serverName] ?? {
+          flag: "🌍",
+          address: "",
+          port: 22,
+          user: "root"
+        }
+      )
     })),
     "Choose a server to delete"
   );

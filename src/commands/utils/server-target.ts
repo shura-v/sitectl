@@ -1,5 +1,5 @@
-import { promptSelect } from "../cli.js";
-import { readConfig, type ServerConfig } from "../config.js";
+import { promptSelect } from "../../cli.js";
+import { readConfig, type ServerConfig } from "../../config.js";
 
 export async function resolveServer(
   serverName?: string
@@ -16,7 +16,7 @@ export async function resolveServer(
     (await promptSelect(
       names.map((name) => ({
         value: name,
-        label: name
+        label: formatServerLabel(name, config.servers[name] ?? { flag: "🌍" } as ServerConfig)
       })),
       "Choose a server"
     ));
@@ -30,4 +30,8 @@ export async function resolveServer(
     name: resolvedServerName,
     server
   };
+}
+
+export function formatServerLabel(name: string, server: ServerConfig): string {
+  return `${server.flag} ${name}`;
 }

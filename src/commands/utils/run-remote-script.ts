@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { ServerConfig } from "../config.js";
+import type { ServerConfig } from "../../config.js";
 
 export async function runRemoteScript(
   server: ServerConfig,

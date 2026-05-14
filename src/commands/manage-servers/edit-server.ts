@@ -1,6 +1,7 @@
 import { outro } from "@clack/prompts";
-import { promptSelect, promptText } from "../cli.js";
-import { getConfigPath, readConfig, writeConfig } from "../config.js";
+import { promptSelect, promptText } from "../../cli.js";
+import { getConfigPath, readConfig, writeConfig } from "../../config.js";
+import { formatServerLabel } from "../utils/server-target.js";
 import { promptServerFields } from "./shared.js";
 
 export async function runEditServerCommand(): Promise<void> {
@@ -15,7 +16,10 @@ export async function runEditServerCommand(): Promise<void> {
   const currentName = await promptSelect(
     names.map((name) => ({
       value: name,
-      label: name
+      label: formatServerLabel(
+        name,
+        config.servers[name] ?? { flag: "🌍", address: "", port: 22, user: "root" }
+      )
     })),
     "Choose a server to edit"
   );

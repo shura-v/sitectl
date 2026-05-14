@@ -1,5 +1,10 @@
-import { access, mkdir, readdir } from "node:fs/promises";
-import { ensureDataDirectory, getDataPath, readDataText } from "./assets.js";
+import { access, mkdir, readdir, writeFile } from "node:fs/promises";
+import {
+  ensureDefaultDataFile,
+  ensureDataDirectory,
+  getDataPath,
+  readDataText
+} from "./assets.js";
 
 export async function listSiteNames(): Promise<string[]> {
   const sitesDirectoryPath = await ensureDataDirectory("nginx/sites");
@@ -28,6 +33,23 @@ export async function createSiteDirectory(siteName: string): Promise<string> {
   const siteDirectoryPath = getDataPath(`nginx/sites/${siteName}`);
   await mkdir(siteDirectoryPath, { recursive: true });
   return siteDirectoryPath;
+}
+
+export async function seedSiteConfig(siteName: string): Promise<string> {
+  const siteConfigPath = getDataPath(`nginx/sites/${siteName}/nginx.conf`);
+
+  if (await hasSiteConfig(siteName)) {
+    return siteConfigPath;
+  }
+
+  await ensureDefaultDataFile("nginx/nginx.conf", "nginx/nginx.conf");
+  const template = await readDataText("nginx/nginx.conf");
+  const rendered = template.replaceAll("__SITE_NAME__", siteName);
+
+  await createSiteDirectory(siteName);
+  await writeFile(siteConfigPath, rendered, "utf8");
+
+  return siteConfigPath;
 }
 
 export function getSitesDirectoryPath(): string {

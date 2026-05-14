@@ -1,7 +1,7 @@
 import { outro } from "@clack/prompts";
-import { ensureDefaultDataFile, readDataText } from "../assets.js";
-import { resolveServer } from "./server-target.js";
-import { runRemoteScript } from "./run-remote-script.js";
+import { ensureDefaultDataFile, readDataText } from "../../assets.js";
+import { runRemoteScript } from "../utils/run-remote-script.js";
+import { resolveServer } from "../utils/server-target.js";
 
 export async function runConfigureZshCommand(): Promise<void> {
   const { name, server } = await resolveServer();
