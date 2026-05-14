@@ -29,12 +29,36 @@ The workflow is interactive only:
 npm install -g sitectl
 ```
 
-On macOS, `Manage sites -> Copy conf files to server` expects a newer `rsync`
-than the system one. Install it with Homebrew:
+`sitectl` is intended to run on Unix-like systems.
+
+Supported local environments:
+
+- Linux
+- macOS
+- Windows via WSL
+
+Native Windows is not supported at the moment.
+
+Required local dependencies:
+
+- Node.js
+- npm
+- `ssh`
+- `rsync`
+- `ssh-copy-id`
+
+Platform notes:
+
+- On macOS, `Manage sites -> Copy conf files to server` expects a newer `rsync`
+  than the system one. Install it with Homebrew:
 
 ```bash
 brew install rsync
 ```
+
+- On Linux, `Open data dir` and local config opening use `xdg-open`, which is
+  typically provided by your desktop environment or `xdg-utils`.
+- On Windows, use WSL and install the Linux dependencies inside WSL.
 
 ## Menu
 
