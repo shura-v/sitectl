@@ -6,13 +6,15 @@ import { runConfigureZshCommand } from "./configure-zsh.js";
 import { runDeleteServerCommand } from "./delete-server.js";
 import { runEditServerCommand } from "./edit-server.js";
 import { runInstallBasePackagesCommand } from "./install-base-packages.js";
+import { runSetupUfwCommand } from "./setup-ufw.js";
 
 type CommandId =
   | "add-server"
   | "edit-server"
   | "delete-server"
   | "install-base-packages"
-  | "configure-zsh";
+  | "configure-zsh"
+  | "setup-ufw";
 
 type CommandDefinition = {
   id: CommandId;
@@ -51,6 +53,12 @@ const commandDefinitions: CommandDefinition[] = [
     label: "Configure zsh",
     hint: "Create ~/.myzshrc and wire it into ~/.zshrc",
     run: runConfigureZshCommand
+  },
+  {
+    id: "setup-ufw",
+    label: "Setup ufw",
+    hint: "Allow SSH, 80/tcp and 443/tcp, then enable ufw",
+    run: runSetupUfwCommand
   }
 ];
 
