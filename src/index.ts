@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { intro } from "@clack/prompts";
+import { ensureBundledDataFiles } from "./assets.js";
 import { cancelWithMessage, failAndExit } from "./cli.js";
 import { runCommandFlow } from "./commands/index.js";
 import { runSshCopyIdCommand } from "./commands/ssh-copy-id.js";
@@ -10,6 +11,7 @@ const version = "0.1.0";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+  await ensureBundledDataFiles();
 
   if (isSshInvocation(args)) {
     await runSshCommand(args[1]);
