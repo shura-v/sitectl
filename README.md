@@ -30,6 +30,11 @@ sitectl ssh prod
 sitectl ssh-copy-id
 ```
 
+Interactive server actions also include:
+
+- `Install base packages`
+- `Configure zsh`
+
 ## Build
 
 ```bash
@@ -57,6 +62,7 @@ Current server shape:
   "servers": {
     "prod": {
       "address": "203.0.113.10",
+      "flag": "🌍",
       "port": 22,
       "user": "root"
     }
@@ -75,3 +81,9 @@ The non-interactive commands are:
 - `sitectl ssh`
 - `sitectl ssh <server-name>`
 - `sitectl ssh-copy-id`
+
+Remote automation assets live in:
+
+- `assets/remote/install-base-packages.sh`
+- `assets/remote/configure-zsh.sh`
+- `assets/remote/myzshrc.zsh`

@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 
 export type ServerConfig = {
   address: string;
+  flag: string;
   port: number;
   user: string;
 };
@@ -26,9 +27,20 @@ export async function readConfig(): Promise<SitectlConfig> {
   try {
     const contents = await readFile(configPath, "utf8");
     const parsed = JSON.parse(contents) as Partial<SitectlConfig>;
+    const servers = Object.fromEntries(
+      Object.entries(parsed.servers ?? {}).map(([name, server]) => [
+        name,
+        {
+          address: server.address ?? "",
+          flag: server.flag ?? "🌍",
+          port: server.port ?? 22,
+          user: server.user ?? "root"
+        }
+      ])
+    );
 
     return {
-      servers: parsed.servers ?? {}
+      servers
     };
   } catch (error) {
     if (isMissingFileError(error)) {

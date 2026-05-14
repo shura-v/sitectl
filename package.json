@@ -8,7 +8,8 @@
     "sitectl": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "assets"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

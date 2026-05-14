@@ -2,10 +2,17 @@ import type { SelectOption } from "../cli.js";
 import { promptSelect } from "../cli.js";
 import { getConfigPath } from "../config.js";
 import { runAddServerCommand } from "./add-server.js";
+import { runConfigureZshCommand } from "./configure-zsh.js";
 import { runDeleteServerCommand } from "./delete-server.js";
 import { runEditServerCommand } from "./edit-server.js";
+import { runInstallBasePackagesCommand } from "./install-base-packages.js";
 
-type CommandId = "add-server" | "edit-server" | "delete-server";
+type CommandId =
+  | "add-server"
+  | "edit-server"
+  | "delete-server"
+  | "install-base-packages"
+  | "configure-zsh";
 
 type CommandDefinition = {
   id: CommandId;
@@ -32,6 +39,18 @@ const commandDefinitions: CommandDefinition[] = [
     label: "Delete server",
     hint: "Remove a saved server record",
     run: runDeleteServerCommand
+  },
+  {
+    id: "install-base-packages",
+    label: "Install base packages",
+    hint: "Run the base apt/bootstrap script on a server",
+    run: runInstallBasePackagesCommand
+  },
+  {
+    id: "configure-zsh",
+    label: "Configure zsh",
+    hint: "Create ~/.myzshrc and wire it into ~/.zshrc",
+    run: runConfigureZshCommand
   }
 ];
 

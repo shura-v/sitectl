@@ -5,6 +5,7 @@ export async function promptServerFields(
   defaults?: ServerConfig
 ): Promise<ServerConfig> {
   const isEditing = Boolean(defaults);
+  const defaultFlag = defaults?.flag ?? "🌍";
   const defaultPort = defaults?.port ?? 22;
   const defaultUser = defaults?.user ?? "root";
   const address = await promptText({
@@ -18,6 +19,12 @@ export async function promptServerFields(
 
       return undefined;
     }
+  });
+  const flag = await promptText({
+    message: "Server flag",
+    placeholder: "🌍",
+    defaultValue: isEditing ? undefined : defaultFlag,
+    initialValue: isEditing ? defaultFlag : undefined
   });
   const portValue = await promptText({
     message: "SSH port",
@@ -47,6 +54,7 @@ export async function promptServerFields(
 
   return {
     address,
+    flag: flag.length === 0 ? defaultFlag : flag,
     port: portValue.length === 0 ? defaultPort : Number(portValue),
     user: user.length === 0 ? defaultUser : user
   };
