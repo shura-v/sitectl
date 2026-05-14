@@ -2,10 +2,20 @@
 
 Minimal TypeScript CLI scaffold for site operations.
 
+This is a CLI-only utility for interactive local use. It is not intended for CI
+or hermetic automation environments.
+
 ## Setup
 
 ```bash
 npm install
+```
+
+On macOS, `Manage sites -> Copy conf files to server` expects a newer `rsync`
+than the system one. Install it with Homebrew:
+
+```bash
+brew install rsync
 ```
 
 ## Run
@@ -32,9 +42,9 @@ sitectl ssh-copy-id
 
 Interactive server actions also include:
 
-- `Install base packages`
-- `Configure zsh`
-- `Setup ufw`
+- `Open data dir`
+- `Manage servers`
+- `Manage sites`
 
 ## Build
 
@@ -77,6 +87,12 @@ The workflow is interactive only:
 - choose an action from the menu
 - follow the prompts
 
+Main menu currently includes:
+
+- `Manage servers`
+- `Manage sites`
+- `Open data dir`
+
 The non-interactive commands are:
 
 - `sitectl ssh`
@@ -85,7 +101,22 @@ The non-interactive commands are:
 
 Remote automation assets live in:
 
-- `assets/remote/install-base-packages.sh`
-- `assets/remote/configure-zsh.sh`
-- `assets/remote/myzshrc.zsh`
-- `assets/remote/setup-ufw.sh`
+- `~/.config/sitectl/nginx/bootstrap.conf`
+- `~/.config/sitectl/remote/install-base-packages.sh`
+- `~/.config/sitectl/remote/configure-zsh.sh`
+- `~/.config/sitectl/remote/myzshrc.zsh`
+- `~/.config/sitectl/remote/setup-ufw.sh`
+
+Nginx site registry lives in:
+
+- `~/.config/sitectl/nginx/sites/<domain>/nginx.conf`
+
+`Manage sites` currently does one thing:
+
+- pick a local site folder from `~/.config/sitectl/nginx/sites`
+- generate `<domain>.bootstrap.conf` from `~/.config/sitectl/nginx/bootstrap.conf`
+- read the HTTPS config from `<domain>/nginx.conf`
+- sync both files to `/etc/nginx/sites-available/` on the selected server
+
+Defaults are seeded from the packaged `config/` files during `prepare`, and the
+runtime still recreates a missing file on demand if needed.

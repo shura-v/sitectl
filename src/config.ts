@@ -17,8 +17,12 @@ const defaultConfig: SitectlConfig = {
   servers: {}
 };
 
+export function getDataDirectoryPath(): string {
+  return join(homedir(), ".config", "sitectl");
+}
+
 export function getConfigPath(): string {
-  return join(homedir(), ".config", "sitectl", "config.json");
+  return join(getDataDirectoryPath(), "config.json");
 }
 
 export async function readConfig(): Promise<SitectlConfig> {

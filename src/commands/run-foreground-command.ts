@@ -2,7 +2,10 @@ import { spawn } from "node:child_process";
 
 export async function runForegroundCommand(
   command: string,
-  args: string[]
+  args: string[],
+  options: {
+    throwOnNonZero?: boolean;
+  } = {}
 ): Promise<void> {
   const child = spawn(command, args, {
     stdio: "inherit"
@@ -18,11 +21,19 @@ export async function runForegroundCommand(
   );
 
   if (result.signal) {
+    if (options.throwOnNonZero) {
+      throw new Error(`${command} was terminated by signal ${result.signal}.`);
+    }
+
     process.kill(process.pid, result.signal);
     return;
   }
 
   if (result.code && result.code !== 0) {
+    if (options.throwOnNonZero) {
+      throw new Error(`${command} failed with exit code ${result.code}.`);
+    }
+
     process.exitCode = result.code;
   }
 }

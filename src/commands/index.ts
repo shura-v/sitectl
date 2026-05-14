@@ -1,3 +1,4 @@
+import { cancel, outro } from "@clack/prompts";
 import type { SelectOption } from "../cli.js";
 import { promptSelect } from "../cli.js";
 import { getConfigPath } from "../config.js";
@@ -6,15 +7,24 @@ import { runConfigureZshCommand } from "./configure-zsh.js";
 import { runDeleteServerCommand } from "./delete-server.js";
 import { runEditServerCommand } from "./edit-server.js";
 import { runInstallBasePackagesCommand } from "./install-base-packages.js";
+import { runManageSitesCommand } from "./manage-sites.js";
+import { runOpenDataDirCommand } from "./open-data-dir.js";
 import { runSetupUfwCommand } from "./setup-ufw.js";
 
 type CommandId =
+  | "manage-servers"
+  | "open-data-dir"
+  | "manage-sites"
+  | "exit";
+
+type ServerCommandId =
   | "add-server"
   | "edit-server"
   | "delete-server"
   | "install-base-packages"
   | "configure-zsh"
-  | "setup-ufw";
+  | "setup-ufw"
+  | "back";
 
 type CommandDefinition = {
   id: CommandId;
@@ -24,6 +34,32 @@ type CommandDefinition = {
 };
 
 const commandDefinitions: CommandDefinition[] = [
+  {
+    id: "manage-servers",
+    label: "Manage servers",
+    hint: "Add/edit/delete servers and run server-level setup actions",
+    run: runManageServersFlow
+  },
+  {
+    id: "manage-sites",
+    label: "Manage sites",
+    hint: "Add sites and copy bootstrap/http + https nginx configs",
+    run: runManageSitesCommand
+  },
+  {
+    id: "open-data-dir",
+    label: "Open data dir",
+    hint: "Open ~/.config/sitectl in the system file manager",
+    run: runOpenDataDirCommand
+  }
+];
+
+const serverCommandDefinitions: Array<{
+  id: Exclude<ServerCommandId, "back">;
+  label: string;
+  hint: string;
+  run: () => Promise<void>;
+}> = [
   {
     id: "add-server",
     label: "Add server",
@@ -63,19 +99,76 @@ const commandDefinitions: CommandDefinition[] = [
 ];
 
 export async function runCommandFlow(): Promise<void> {
-  const selected = await promptSelect(
-    commandDefinitions.map<SelectOption<CommandId>>((command) => ({
-      value: command.id,
-      label: command.label,
-      hint: command.hint
-    })),
-    `Choose an action (${getConfigPath()})`
-  );
-  const command = commandDefinitions.find((definition) => definition.id === selected);
+  while (true) {
+    const selected = await promptSelect(
+      [
+        ...commandDefinitions.map<SelectOption<CommandId>>((command) => ({
+          value: command.id,
+          label: command.label,
+          hint: command.hint
+        })),
+        {
+          value: "exit",
+          label: "Exit",
+          hint: "Close the interactive menu"
+        }
+      ],
+      `Choose an action (${getConfigPath()})`
+    );
 
-  if (!command) {
-    throw new Error(`Unknown command: ${selected}`);
+    if (selected === "exit") {
+      outro("Bye.");
+      return;
+    }
+
+    const command = commandDefinitions.find((definition) => definition.id === selected);
+
+    if (!command) {
+      throw new Error(`Unknown command: ${selected}`);
+    }
+
+    try {
+      await command.run();
+    } catch (error) {
+      cancel(error instanceof Error ? error.message : "Unknown error.");
+    }
   }
+}
 
-  await command.run();
+async function runManageServersFlow(): Promise<void> {
+  while (true) {
+    const selected = await promptSelect(
+      [
+        ...serverCommandDefinitions.map<SelectOption<ServerCommandId>>((command) => ({
+          value: command.id,
+          label: command.label,
+          hint: command.hint
+        })),
+        {
+          value: "back",
+          label: "Back",
+          hint: "Return to the main menu"
+        }
+      ],
+      "Manage servers"
+    );
+
+    if (selected === "back") {
+      return;
+    }
+
+    const command = serverCommandDefinitions.find(
+      (definition) => definition.id === selected
+    );
+
+    if (!command) {
+      throw new Error(`Unknown command: ${selected}`);
+    }
+
+    try {
+      await command.run();
+    } catch (error) {
+      cancel(error instanceof Error ? error.message : "Unknown error.");
+    }
+  }
 }
