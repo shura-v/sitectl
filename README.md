@@ -19,6 +19,10 @@ The workflow is interactive only:
 - choose an action from the menu
 - follow the prompts
 
+## Demo
+
+![Interactive sitectl workflow](docs/usage.gif)
+
 ## Setup
 
 ```bash
