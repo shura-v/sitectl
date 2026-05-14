@@ -14,6 +14,22 @@ npm install
 npm run dev
 ```
 
+SSH command:
+
+```bash
+npm run ssh
+npm run ssh -- prod
+npm run ssh-copy-id
+```
+
+After global install:
+
+```bash
+sitectl ssh
+sitectl ssh prod
+sitectl ssh-copy-id
+```
+
 ## Build
 
 ```bash
@@ -53,3 +69,9 @@ The workflow is interactive only:
 - start `sitectl`
 - choose an action from the menu
 - follow the prompts
+
+The non-interactive commands are:
+
+- `sitectl ssh`
+- `sitectl ssh <server-name>`
+- `sitectl ssh-copy-id`

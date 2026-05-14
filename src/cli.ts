@@ -20,7 +20,7 @@ export async function promptText(options: {
     validate: options.validate
   });
 
-  return unwrapPrompt(result);
+  return unwrapPrompt(result) ?? "";
 }
 
 export type SelectOption<T extends string> = {

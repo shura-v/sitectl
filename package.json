@@ -13,6 +13,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "npm run build && node dist/index.js",
+    "prepare": "npm run build",
+    "ssh": "npm run build && node dist/index.js ssh",
+    "ssh-copy-id": "npm run build && node dist/index.js ssh-copy-id",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
