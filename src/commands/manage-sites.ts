@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureDefaultDataFile, readDataText } from "../assets.js";
-import { promptSelect, promptText } from "../cli.js";
+import { isPromptCancelledError, promptSelect, promptText } from "../cli.js";
 import {
   createSiteDirectory,
   getSitesDirectoryPath,
@@ -16,37 +16,55 @@ import { resolveServer } from "./server-target.js";
 
 export async function runManageSitesCommand(): Promise<void> {
   while (true) {
-    const action = await promptSelect(
-      [
-        {
-          value: "add-site",
-          label: "Add site",
-          hint: "Create a site folder in the local nginx registry"
-        },
-        {
-          value: "copy-conf-files-to-server",
-          label: "Copy conf files to server",
-          hint: "Upload bootstrap + https nginx configs to a server"
-        },
-        {
-          value: "back",
-          label: "Back",
-          hint: "Return to the main menu"
-        }
-      ],
-      "Manage sites"
-    );
+    let action: "add-site" | "copy-conf-files-to-server" | "back";
+
+    try {
+      action = await promptSelect(
+        [
+          {
+            value: "add-site",
+            label: "Add site",
+            hint: "Create a site folder in the local nginx registry"
+          },
+          {
+            value: "copy-conf-files-to-server",
+            label: "Copy conf files to server",
+            hint: "Upload bootstrap + https nginx configs to a server"
+          },
+          {
+            value: "back",
+            label: "Back",
+            hint: "Return to the main menu"
+          }
+        ],
+        "Manage sites"
+      );
+    } catch (error) {
+      if (isPromptCancelledError(error)) {
+        return;
+      }
+
+      throw error;
+    }
 
     if (action === "back") {
       return;
     }
 
-    if (action === "add-site") {
-      await runAddSiteAction();
-      continue;
-    }
+    try {
+      if (action === "add-site") {
+        await runAddSiteAction();
+        continue;
+      }
 
-    await runCopyConfFilesToServerAction();
+      await runCopyConfFilesToServerAction();
+    } catch (error) {
+      if (isPromptCancelledError(error)) {
+        continue;
+      }
+
+      throw error;
+    }
   }
 }
 

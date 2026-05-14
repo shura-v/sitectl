@@ -1,6 +1,6 @@
 import { cancel, outro } from "@clack/prompts";
 import type { SelectOption } from "../cli.js";
-import { promptSelect } from "../cli.js";
+import { isPromptCancelledError, promptSelect } from "../cli.js";
 import { getConfigPath } from "../config.js";
 import { runAddServerCommand } from "./add-server.js";
 import { runConfigureZshCommand } from "./configure-zsh.js";
@@ -100,21 +100,32 @@ const serverCommandDefinitions: Array<{
 
 export async function runCommandFlow(): Promise<void> {
   while (true) {
-    const selected = await promptSelect(
-      [
-        ...commandDefinitions.map<SelectOption<CommandId>>((command) => ({
-          value: command.id,
-          label: command.label,
-          hint: command.hint
-        })),
-        {
-          value: "exit",
-          label: "Exit",
-          hint: "Close the interactive menu"
-        }
-      ],
-      `Choose an action (${getConfigPath()})`
-    );
+    let selected: CommandId;
+
+    try {
+      selected = await promptSelect(
+        [
+          ...commandDefinitions.map<SelectOption<CommandId>>((command) => ({
+            value: command.id,
+            label: command.label,
+            hint: command.hint
+          })),
+          {
+            value: "exit",
+            label: "Exit",
+            hint: "Close the interactive menu"
+          }
+        ],
+        `Choose an action (${getConfigPath()})`
+      );
+    } catch (error) {
+      if (isPromptCancelledError(error)) {
+        outro("Bye.");
+        return;
+      }
+
+      throw error;
+    }
 
     if (selected === "exit") {
       outro("Bye.");
@@ -130,6 +141,10 @@ export async function runCommandFlow(): Promise<void> {
     try {
       await command.run();
     } catch (error) {
+      if (isPromptCancelledError(error)) {
+        continue;
+      }
+
       cancel(error instanceof Error ? error.message : "Unknown error.");
     }
   }
@@ -137,21 +152,31 @@ export async function runCommandFlow(): Promise<void> {
 
 async function runManageServersFlow(): Promise<void> {
   while (true) {
-    const selected = await promptSelect(
-      [
-        ...serverCommandDefinitions.map<SelectOption<ServerCommandId>>((command) => ({
-          value: command.id,
-          label: command.label,
-          hint: command.hint
-        })),
-        {
-          value: "back",
-          label: "Back",
-          hint: "Return to the main menu"
-        }
-      ],
-      "Manage servers"
-    );
+    let selected: ServerCommandId;
+
+    try {
+      selected = await promptSelect(
+        [
+          ...serverCommandDefinitions.map<SelectOption<ServerCommandId>>((command) => ({
+            value: command.id,
+            label: command.label,
+            hint: command.hint
+          })),
+          {
+            value: "back",
+            label: "Back",
+            hint: "Return to the main menu"
+          }
+        ],
+        "Manage servers"
+      );
+    } catch (error) {
+      if (isPromptCancelledError(error)) {
+        return;
+      }
+
+      throw error;
+    }
 
     if (selected === "back") {
       return;
@@ -168,6 +193,10 @@ async function runManageServersFlow(): Promise<void> {
     try {
       await command.run();
     } catch (error) {
+      if (isPromptCancelledError(error)) {
+        continue;
+      }
+
       cancel(error instanceof Error ? error.message : "Unknown error.");
     }
   }

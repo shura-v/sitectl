@@ -1,5 +1,12 @@
 import { cancel, confirm, isCancel, select, text } from "@clack/prompts";
 
+export class PromptCancelledError extends Error {
+  constructor() {
+    super("Prompt cancelled.");
+    this.name = "PromptCancelledError";
+  }
+}
+
 export function cancelWithMessage(message: string): never {
   cancel(message);
   process.exit(1);
@@ -51,14 +58,22 @@ export async function promptConfirm(message: string): Promise<boolean> {
 }
 
 export function failAndExit(error: unknown): never {
+  if (isPromptCancelledError(error)) {
+    cancel("Cancelled.");
+    process.exit(0);
+  }
+
   cancel(error instanceof Error ? error.message : "Unknown error.");
   process.exit(1);
 }
 
+export function isPromptCancelledError(error: unknown): error is PromptCancelledError {
+  return error instanceof PromptCancelledError;
+}
+
 function unwrapPrompt<T>(value: T | symbol): T {
   if (isCancel(value)) {
-    cancel("Cancelled.");
-    process.exit(0);
+    throw new PromptCancelledError();
   }
 
   return value;
