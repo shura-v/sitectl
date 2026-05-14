@@ -20,6 +20,11 @@ export type ResolvedSiteServer = {
   server: Awaited<ReturnType<typeof resolveServer>>["server"];
 };
 
+export type RemoteCertificateLineage = {
+  certificateName: string;
+  domains: string[];
+};
+
 export async function chooseSiteAndServer(): Promise<ResolvedSiteServer> {
   const siteNames = await listSiteNames();
 
@@ -143,6 +148,14 @@ export async function remoteFindCertificateLineage(
   server: ResolvedSiteServer["server"],
   siteName: string
 ): Promise<string | null> {
+  const lineage = await remoteFindCertificateLineageDetails(server, siteName);
+  return lineage?.certificateName ?? null;
+}
+
+export async function remoteFindCertificateLineageDetails(
+  server: ResolvedSiteServer["server"],
+  siteName: string
+): Promise<RemoteCertificateLineage | null> {
   const deployTarget = `${server.user}@${server.address}`;
   const certificatesCommand =
     server.user === "root"
@@ -158,7 +171,10 @@ export async function remoteFindCertificateLineage(
   return parseCertbotLineage(output, siteName);
 }
 
-export function parseCertbotLineage(output: string, siteName: string): string | null {
+export function parseCertbotLineage(
+  output: string,
+  siteName: string
+): RemoteCertificateLineage | null {
   const blocks = output.split(/\n\s*Certificate Name:\s*/).slice(1);
 
   for (const block of blocks) {
@@ -177,7 +193,10 @@ export function parseCertbotLineage(output: string, siteName: string): string | 
       .filter(Boolean);
 
     if (domains.includes(siteName)) {
-      return certificateName;
+      return {
+        certificateName,
+        domains
+      };
     }
   }
 
@@ -185,6 +204,19 @@ export function parseCertbotLineage(output: string, siteName: string): string | 
 }
 
 export async function updateLocalSiteConfigLineage(
+  siteName: string,
+  lineage: string
+): Promise<void> {
+  await rewriteLocalSiteConfigCertificatePaths(siteName, lineage);
+}
+
+export async function resetLocalSiteConfigCertificatePaths(
+  siteName: string
+): Promise<void> {
+  await rewriteLocalSiteConfigCertificatePaths(siteName, siteName);
+}
+
+async function rewriteLocalSiteConfigCertificatePaths(
   siteName: string,
   lineage: string
 ): Promise<void> {

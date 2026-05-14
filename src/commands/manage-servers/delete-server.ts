@@ -5,7 +5,7 @@ import { formatServerLabel } from "../utils/server-target.js";
 
 export async function runDeleteServerCommand(): Promise<void> {
   const config = await readConfig();
-  const names = Object.keys(config.servers).sort();
+  const names = Object.keys(config.servers);
 
   if (names.length === 0) {
     outro(`No servers found in ${getConfigPath()}.`);

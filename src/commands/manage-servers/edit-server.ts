@@ -6,7 +6,7 @@ import { promptServerFields } from "./shared.js";
 
 export async function runEditServerCommand(): Promise<void> {
   const config = await readConfig();
-  const names = Object.keys(config.servers).sort();
+  const names = Object.keys(config.servers);
 
   if (names.length === 0) {
     outro(`No servers found in ${getConfigPath()}.`);

@@ -5,6 +5,7 @@ import { runDisableHttpsAction } from "./disable-https.js";
 import { runEnableHttpsAction } from "./enable-https.js";
 import { runIssueCertificateAction } from "./issue-certificate.js";
 import { runOpenNginxConfAction } from "./open-nginx-conf.js";
+import { runRemoveSiteFromServerAction } from "./remove-site-from-server.js";
 
 type ManageSitesAction =
   | "add-site"
@@ -13,6 +14,7 @@ type ManageSitesAction =
   | "issue-certificate"
   | "enable-https"
   | "disable-https"
+  | "remove-site-from-server"
   | "back";
 
 export async function runManageSitesCommand(): Promise<void> {
@@ -53,6 +55,11 @@ export async function runManageSitesCommand(): Promise<void> {
             hint: "Switch the site back to the bootstrap HTTP config"
           },
           {
+            value: "remove-site-from-server",
+            label: "Remove site from server",
+            hint: "Delete remote nginx config, symlink, and certificate"
+          },
+          {
             value: "back",
             label: "Back",
             hint: "Return to the main menu"
@@ -91,6 +98,9 @@ export async function runManageSitesCommand(): Promise<void> {
           break;
         case "disable-https":
           await runDisableHttpsAction();
+          break;
+        case "remove-site-from-server":
+          await runRemoveSiteFromServerAction();
           break;
       }
     } catch (error) {

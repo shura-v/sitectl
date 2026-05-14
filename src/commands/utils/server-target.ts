@@ -5,7 +5,7 @@ export async function resolveServer(
   serverName?: string
 ): Promise<{ name: string; server: ServerConfig }> {
   const config = await readConfig();
-  const names = Object.keys(config.servers).sort();
+  const names = Object.keys(config.servers);
 
   if (names.length === 0) {
     throw new Error("No servers found.");

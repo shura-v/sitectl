@@ -7,6 +7,7 @@ import { runDeleteServerCommand } from "./delete-server.js";
 import { runEditServerCommand } from "./edit-server.js";
 import { runInstallBasePackagesCommand } from "./install-base-packages.js";
 import { runSetupUfwCommand } from "./setup-ufw.js";
+import { runSshCommand } from "../ssh.js";
 import { runSshCopyIdCommand } from "../ssh-copy-id.js";
 
 type ServerCommandId =
@@ -14,6 +15,7 @@ type ServerCommandId =
   | "edit-server"
   | "delete-server"
   | "ssh-copy-id"
+  | "ssh"
   | "install-base-packages"
   | "configure-zsh"
   | "setup-ufw"
@@ -48,6 +50,12 @@ const serverCommandDefinitions: Array<{
     label: "SSH copy id",
     hint: "Install your SSH public key on a server",
     run: runSshCopyIdCommand
+  },
+  {
+    id: "ssh",
+    label: "SSH",
+    hint: "Open an SSH session to a server",
+    run: runSshCommand
   },
   {
     id: "install-base-packages",
