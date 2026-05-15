@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createRequire } from "node:module";
 import { intro } from "@clack/prompts";
 import { ensureBundledDataFiles } from "./assets.js";
 import { cancelWithMessage, failAndExit } from "./cli.js";
@@ -8,7 +9,8 @@ import { runSshCopyIdCommand } from "./commands/ssh-copy-id.js";
 import { runSshCommand } from "./commands/ssh.js";
 import { ensureSiteTemplateFile } from "./sites.js";
 
-const version = "0.1.0";
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json") as { version: string };
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
