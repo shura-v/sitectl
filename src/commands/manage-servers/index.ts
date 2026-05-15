@@ -6,7 +6,9 @@ import { runConfigureZshCommand } from "./configure-zsh.js";
 import { runDeleteServerCommand } from "./delete-server.js";
 import { runEditServerCommand } from "./edit-server.js";
 import { runInstallBasePackagesCommand } from "./install-base-packages.js";
+import { runInstallDockerCommand } from "./install-docker.js";
 import { runSetupUfwCommand } from "./setup-ufw.js";
+import { runUninstallDockerCommand } from "./uninstall-docker.js";
 import { runSshCommand } from "../ssh.js";
 import { runSshCopyIdCommand } from "../ssh-copy-id.js";
 
@@ -17,6 +19,7 @@ type ServerCommandId =
   | "ssh-copy-id"
   | "ssh"
   | "install-base-packages"
+  | "docker"
   | "configure-zsh"
   | "setup-ufw"
   | "back";
@@ -62,6 +65,12 @@ const serverCommandDefinitions: Array<{
     label: "Install base packages",
     hint: "Run the base apt/bootstrap script on a server",
     run: runInstallBasePackagesCommand
+  },
+  {
+    id: "docker",
+    label: "Docker",
+    hint: "Install or uninstall Docker on a server",
+    run: runManageServerDockerFlow
   },
   {
     id: "configure-zsh",
@@ -126,5 +135,59 @@ export async function runManageServersFlow(): Promise<void> {
 
       cancel(error instanceof Error ? error.message : "Unknown error.");
     }
+  }
+}
+
+type DockerCommandId = "install-docker" | "uninstall-docker" | "back";
+
+const dockerCommandDefinitions: Array<{
+  id: Exclude<DockerCommandId, "back">;
+  label: string;
+  hint: string;
+  run: () => Promise<void>;
+}> = [
+  {
+    id: "install-docker",
+    label: "Install Docker",
+    hint: "Install Docker CE and Docker Compose plugin on a server",
+    run: runInstallDockerCommand
+  },
+  {
+    id: "uninstall-docker",
+    label: "Uninstall Docker",
+    hint: "Remove Docker packages and delete containers, images, networks, and volumes",
+    run: runUninstallDockerCommand
+  }
+];
+
+async function runManageServerDockerFlow(): Promise<void> {
+  while (true) {
+    const selected = await promptSelect(
+      [
+        ...dockerCommandDefinitions.map<SelectOption<DockerCommandId>>((command) => ({
+          value: command.id,
+          label: command.label,
+          hint: command.hint
+        })),
+        {
+          value: "back",
+          label: "Back",
+          hint: "Return to Manage servers"
+        }
+      ],
+      "Docker"
+    );
+
+    if (selected === "back") {
+      return;
+    }
+
+    const command = dockerCommandDefinitions.find((definition) => definition.id === selected);
+
+    if (!command) {
+      throw new Error(`Unknown Docker command: ${selected}`);
+    }
+
+    await command.run();
   }
 }

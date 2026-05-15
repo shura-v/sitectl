@@ -82,8 +82,15 @@ Main menu:
 - `Edit server`
 - `Delete server`
 - `Install base packages`
+- `Docker`
 - `Configure zsh`
 - `Setup ufw`
+- `Back`
+
+`Manage servers -> Docker`:
+
+- `Install Docker`
+- `Uninstall Docker`
 - `Back`
 
 `Manage sites`:
@@ -106,6 +113,8 @@ The non-interactive commands are:
 Remote automation assets live in:
 
 - `~/.config/sitectl/remote/install-base-packages.sh`
+- `~/.config/sitectl/remote/docker/install-docker.sh`
+- `~/.config/sitectl/remote/docker/uninstall-docker.sh`
 - `~/.config/sitectl/remote/configure-zsh.sh`
 - `~/.config/sitectl/remote/myzshrc.zsh`
 - `~/.config/sitectl/remote/setup-ufw.sh`
@@ -128,8 +137,9 @@ Typical flow for a new VPS:
 1. `Add server`
 2. `sitectl ssh-copy-id`
 3. `Install base packages`
-4. `Configure zsh`
-5. `Setup ufw`
+4. `Install docker` if needed
+5. `Configure zsh`
+6. `Setup ufw`
 
 What those actions do:
 
@@ -141,6 +151,12 @@ What those actions do:
 - `Install base packages`
   Runs the opinionated bootstrap script for supported Debian and Ubuntu
   servers.
+- `Install docker`
+  Installs Docker CE and the Docker Compose plugin from Docker's apt
+  repository.
+- `Uninstall docker`
+  Removes Docker packages and permanently deletes Docker data, including
+  containers, images, networks, and volumes.
 - `Configure zsh`
   Installs the custom shell config from `~/.config/sitectl/remote/`.
 - `Setup ufw`
