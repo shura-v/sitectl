@@ -8,7 +8,8 @@ It is opinionated, but customizable:
   flow is written for `apt`, `nginx`, `certbot`, `ufw`, and related packages
 - after install, you can edit the data files in `~/.config/sitectl/` however you
   want and adapt the tool to your own setup
-- templates, remote scripts, and nginx configs are meant to be user-editable
+- the main nginx customization point is
+  `~/.config/sitectl/nginx/sites/nginx-template.conf`
 - local development and test commands require Node.js 20 or newer
 
 This is a CLI-only utility for interactive local use. It is not intended for CI
@@ -93,6 +94,7 @@ Main menu:
 - `Issue certificate`
 - `Enable https`
 - `Disable https`
+- `Remove site from server`
 - `Back`
 
 The non-interactive commands are:
@@ -108,10 +110,11 @@ Remote automation assets live in:
 - `~/.config/sitectl/remote/myzshrc.zsh`
 - `~/.config/sitectl/remote/setup-ufw.sh`
 
-The temporary HTTP bootstrap nginx config, ACME challenge snippet, and managed
-SSL snippet are handled internally by `sitectl` and are not stored in
-`~/.config`. In other words, `sitectl` manages the bootstrap HTTP config
-itself.
+For nginx site deployment, `sitectl` guarantees compatibility only for configs
+that keep using its managed include files under `/etc/nginx/sitectl-includes/`
+together with the user-editable
+`~/.config/sitectl/nginx/sites/nginx-template.conf`. Other generated nginx
+fragments are internal implementation details managed by `sitectl`.
 
 Nginx site registry lives in:
 
@@ -162,10 +165,12 @@ What those actions do:
   Opens the local site config for editing.
 - `Copy conf files to server`
   Uploads:
-  - `<host>.bootstrap.conf`
+  - the internal HTTP-only site config managed by `sitectl`
   - `<host>.conf` if local `nginx.conf` exists
-  The bootstrap HTTP config is tool-managed; the editable HTTPS/site config
-  comes from your local site template and per-site config.
+  - managed include files in `/etc/nginx/sitectl-includes/`
+  The editable HTTPS/site config comes from your local site template and
+  per-site config. Compatibility is guaranteed only for configs that keep using
+  the managed `sitectl` include files.
 - `Issue certificate`
   Uses `certbot certonly --nginx -d <host>` for domain hosts.
   For IP hosts, uses Certbot's IP certificate flow with `--webroot`,
@@ -173,13 +178,18 @@ What those actions do:
   If the remote system Certbot is too old for IP issuance, `sitectl` can
   optionally install an isolated newer Certbot in `/opt/certbot` during the
   issuance flow.
-  This command is intended for the bootstrap flow when HTTPS is still disabled.
-  After issuing a certificate, the site remains on the bootstrap HTTP config
+  This command is intended for the initial HTTP-only flow before the main HTTPS
+  config is enabled.
+  After issuing a certificate, the site remains on the internal HTTP-only config
   until you explicitly run `Enable https`.
 - `Enable https`
   Switches `sites-enabled/<host>.conf` to the main HTTPS config.
 - `Disable https`
-  Switches `sites-enabled/<host>.conf` back to the bootstrap HTTP config.
+  Switches `sites-enabled/<host>.conf` back to the internal HTTP-only config.
+- `Remove site from server`
+  Deletes the remote nginx config, managed SSL include, and active symlink for
+  the selected site. If the certificate lineage is clearly site-specific, it
+  also removes the certbot certificate.
 
 ## Config
 
