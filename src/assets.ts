@@ -62,6 +62,16 @@ async function seedBundledDirectory(
 
     const sourceEntryUrl = new URL(entry.name, currentSourceDirectoryUrl);
     const relativePath = relative(sourceRootDirectoryPath, fileURLToPath(sourceEntryUrl));
+
+    if (
+      relativePath === "nginx/http.conf" ||
+      relativePath === "nginx/https.conf" ||
+      relativePath === "nginx/acme-challenge.conf" ||
+      relativePath === "nginx/ssl-managed.conf"
+    ) {
+      continue;
+    }
+
     const targetPath = getDataPath(relativePath);
 
     if (entry.isDirectory()) {

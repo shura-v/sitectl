@@ -2,20 +2,21 @@ import { note, outro } from "@clack/prompts";
 import { join } from "node:path";
 import { getDataPath } from "../../assets.js";
 import { promptSelect } from "../../cli.js";
-import { getSitesDirectoryPath, hasSiteConfig, listSiteNames } from "../../sites.js";
+import { getSitesDirectoryPath, hasSiteConfig, listSites } from "../../sites.js";
 import { openLocalPath } from "../utils/open-local-path.js";
+import { formatSiteLabel } from "./shared.js";
 
 export async function runOpenNginxConfAction(): Promise<void> {
-  const siteNames = await listSiteNames();
+  const sites = await listSites();
 
-  if (siteNames.length === 0) {
+  if (sites.length === 0) {
     throw new Error(`No site folders found in ${getSitesDirectoryPath()}.`);
   }
 
   const siteName = await promptSelect(
-    siteNames.map((name) => ({
-      value: name,
-      label: name
+    sites.map((site) => ({
+      value: site.name,
+      label: formatSiteLabel(site.name, site.note)
     })),
     "Choose a site"
   );

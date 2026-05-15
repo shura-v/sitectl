@@ -6,12 +6,14 @@ import { cancelWithMessage, failAndExit } from "./cli.js";
 import { runCommandFlow } from "./commands/index.js";
 import { runSshCopyIdCommand } from "./commands/ssh-copy-id.js";
 import { runSshCommand } from "./commands/ssh.js";
+import { ensureSiteTemplateFile } from "./sites.js";
 
 const version = "0.1.0";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   await ensureBundledDataFiles();
+  await ensureSiteTemplateFile();
 
   if (isSshInvocation(args)) {
     await runSshCommand(args[1]);

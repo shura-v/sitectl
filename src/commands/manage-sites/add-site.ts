@@ -1,31 +1,47 @@
 import { outro } from "@clack/prompts";
-import { ensureDefaultDataFile } from "../../assets.js";
 import { promptText } from "../../cli.js";
-import { createSiteDirectory, seedSiteConfig } from "../../sites.js";
+import { detectHostKind, normalizeHostValue } from "../../hosts.js";
+import { createSiteDirectory, seedSiteConfig, writeSiteNote } from "../../sites.js";
 
 export async function runAddSiteAction(): Promise<void> {
-  const siteName = await promptText({
-    message: "Site name",
+  const siteHostInput = await promptText({
+    message: "Site host (domain or IP address)",
     placeholder: "example.com",
     validate: (value) => {
       if (value.length === 0) {
-        return "Site name is required.";
+        return "Host is required.";
       }
 
       if (value === "." || value === "..") {
-        return "Site name must not be '.' or '..'.";
+        return "Host must not be '.' or '..'.";
       }
 
       if (value.includes("/")) {
-        return "Site name must not contain '/'.";
+        return "Host must not contain '/'.";
+      }
+
+      if (/\s/.test(value)) {
+        return "Host must not contain whitespace.";
       }
 
       return undefined;
     }
   });
+  const siteName = normalizeHostValue(siteHostInput);
+  const siteNote = await promptText({
+    message: "Site note (optional)",
+    placeholder: "Customer site, staging API, demo IPv6 host..."
+  });
   const siteDirectoryPath = await createSiteDirectory(siteName);
-  await ensureDefaultDataFile("nginx/bootstrap.conf", "nginx/bootstrap.conf");
   const siteConfigPath = await seedSiteConfig(siteName);
 
-  outro(`Site created: ${siteDirectoryPath} and ${siteConfigPath}.`);
+  if (siteNote.trim().length > 0) {
+    await writeSiteNote(siteName, siteNote);
+  }
+
+  const hostKind = detectHostKind(siteName);
+
+  outro(
+    `Site created for ${hostKind === "domain" ? "domain" : "IP host"} "${siteName}": ${siteDirectoryPath} and ${siteConfigPath}.`
+  );
 }

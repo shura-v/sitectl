@@ -1,5 +1,6 @@
 import type { ServerConfig } from "../../config.js";
 import { promptText } from "../../cli.js";
+import { normalizeHostValue } from "../../hosts.js";
 
 export async function promptServerFields(
   defaults?: ServerConfig
@@ -8,18 +9,23 @@ export async function promptServerFields(
   const defaultFlag = defaults?.flag ?? "🌍";
   const defaultPort = defaults?.port ?? 22;
   const defaultUser = defaults?.user ?? "root";
-  const address = await promptText({
-    message: "Server address",
+  const addressInput = await promptText({
+    message: "Server host (domain or IP address)",
     placeholder: "203.0.113.10",
     initialValue: defaults?.address,
     validate: (value) => {
       if (value.length === 0) {
-        return "Address is required.";
+        return "Host is required.";
+      }
+
+      if (/\s/.test(value)) {
+        return "Host must not contain whitespace.";
       }
 
       return undefined;
     }
   });
+  const address = normalizeHostValue(addressInput);
   const flag = await promptText({
     message: "Server flag",
     placeholder: "Country flag",

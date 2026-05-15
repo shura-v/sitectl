@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import type { ServerConfig } from "../../config.js";
+import { formatServerSshTarget } from "./server-target.js";
 
 export async function runRemoteScript(
   server: ServerConfig,
@@ -8,7 +9,7 @@ export async function runRemoteScript(
   const sshArgs = [
     "-p",
     String(server.port),
-    `${server.user}@${server.address}`,
+    formatServerSshTarget(server),
     "bash",
     "-s"
   ];

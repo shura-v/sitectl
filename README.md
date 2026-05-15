@@ -9,6 +9,7 @@ It is opinionated, but customizable:
 - after install, you can edit the data files in `~/.config/sitectl/` however you
   want and adapt the tool to your own setup
 - templates, remote scripts, and nginx configs are meant to be user-editable
+- local development and test commands require Node.js 20 or newer
 
 This is a CLI-only utility for interactive local use. It is not intended for CI
 or hermetic automation environments.
@@ -31,6 +32,11 @@ npm install -g sitectl
 
 `sitectl` is intended to run on Unix-like systems.
 
+Supported remote server operating systems:
+
+- Debian 12+
+- Ubuntu 22.04+
+
 Supported local environments:
 
 - Linux
@@ -41,7 +47,7 @@ Native Windows is not supported at the moment.
 
 Required local dependencies:
 
-- Node.js
+- Node.js 20+
 - npm
 - `ssh`
 - `rsync`
@@ -97,15 +103,20 @@ The non-interactive commands are:
 
 Remote automation assets live in:
 
-- `~/.config/sitectl/nginx/bootstrap.conf`
 - `~/.config/sitectl/remote/install-base-packages.sh`
 - `~/.config/sitectl/remote/configure-zsh.sh`
 - `~/.config/sitectl/remote/myzshrc.zsh`
 - `~/.config/sitectl/remote/setup-ufw.sh`
 
+The temporary HTTP bootstrap nginx config, ACME challenge snippet, and managed
+SSL snippet are handled internally by `sitectl` and are not stored in
+`~/.config`. In other words, `sitectl` manages the bootstrap HTTP config
+itself.
+
 Nginx site registry lives in:
 
-- `~/.config/sitectl/nginx/sites/<domain>/nginx.conf`
+- `~/.config/sitectl/nginx/sites/nginx-template.conf`
+- `~/.config/sitectl/nginx/sites/<host>/nginx.conf`
 
 ## Manage Servers Workflow
 
@@ -125,7 +136,8 @@ What those actions do:
   Installs your SSH public key on the target server so the rest of the workflow
   can work over key-based SSH.
 - `Install base packages`
-  Runs the opinionated bootstrap script for Debian-like servers.
+  Runs the opinionated bootstrap script for supported Debian and Ubuntu
+  servers.
 - `Configure zsh`
   Installs the custom shell config from `~/.config/sitectl/remote/`.
 - `Setup ufw`
@@ -144,23 +156,30 @@ Typical flow for a new site:
 What those actions do:
 
 - `Add site`
-  Creates `~/.config/sitectl/nginx/sites/<domain>/` and seeds `nginx.conf`
-  from the local template.
+  Creates `~/.config/sitectl/nginx/sites/<host>/` and seeds `nginx.conf`
+  from `~/.config/sitectl/nginx/sites/nginx-template.conf`.
 - `Open nginx.conf`
   Opens the local site config for editing.
 - `Copy conf files to server`
   Uploads:
-  - `<domain>.bootstrap.conf`
-  - `<domain>.conf` if local `nginx.conf` exists
+  - `<host>.bootstrap.conf`
+  - `<host>.conf` if local `nginx.conf` exists
+  The bootstrap HTTP config is tool-managed; the editable HTTPS/site config
+  comes from your local site template and per-site config.
 - `Issue certificate`
-  Uses `certbot certonly --nginx -d <domain>`.
+  Uses `certbot certonly --nginx -d <host>` for domain hosts.
+  For IP hosts, uses Certbot's IP certificate flow with `--webroot`,
+  `--ip-address`, and the required `shortlived` profile.
+  If the remote system Certbot is too old for IP issuance, `sitectl` can
+  optionally install an isolated newer Certbot in `/opt/certbot` during the
+  issuance flow.
   This command is intended for the bootstrap flow when HTTPS is still disabled.
   After issuing a certificate, the site remains on the bootstrap HTTP config
   until you explicitly run `Enable https`.
 - `Enable https`
-  Switches `sites-enabled/<domain>.conf` to the main HTTPS config.
+  Switches `sites-enabled/<host>.conf` to the main HTTPS config.
 - `Disable https`
-  Switches `sites-enabled/<domain>.conf` back to the bootstrap HTTP config.
+  Switches `sites-enabled/<host>.conf` back to the bootstrap HTTP config.
 
 ## Config
 
@@ -214,6 +233,19 @@ Interactive actions are available through the menu opened by `sitectl`.
 ```bash
 npm run build
 ```
+
+## Test
+
+```bash
+npm test
+```
+
+The test suite covers host detection and nginx host rendering, including the
+IPv6 `server_name [addr]` case used for site templates.
+
+For IP certificate issuance, the remote server needs Certbot `5.4.0` or newer.
+If the system package is older, `sitectl` can prompt to install an isolated
+newer Certbot in `/opt/certbot` and configure renewal for it.
 
 Built CLI also starts without arguments:
 

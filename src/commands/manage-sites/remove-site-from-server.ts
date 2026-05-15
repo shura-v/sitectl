@@ -1,10 +1,12 @@
 import { outro } from "@clack/prompts";
 import { promptConfirm } from "../../cli.js";
 import { runForegroundCommand } from "../utils/run-foreground-command.js";
+import { formatServerSshTarget } from "../utils/server-target.js";
 import {
   chooseSiteAndServer,
   resetLocalSiteConfigCertificatePaths,
   remoteFindCertificateLineageDetails,
+  resolveRemoteCertbotExecutable,
   shellQuote
 } from "./shared.js";
 
@@ -26,16 +28,18 @@ export async function runRemoveSiteFromServerAction(): Promise<void> {
     return;
   }
 
-  const deployTarget = `${server.user}@${server.address}`;
+  const deployTarget = formatServerSshTarget(server);
   const enabledPath = `/etc/nginx/sites-enabled/${siteName}.conf`;
   const httpsPath = `/etc/nginx/sites-available/${siteName}.conf`;
   const bootstrapPath = `/etc/nginx/sites-available/${siteName}.bootstrap.conf`;
+  const sslIncludePath = `/etc/nginx/sitectl-includes/${siteName}.ssl.conf`;
   const nginxCleanupCommand =
     server.user === "root"
       ? [
           `rm -f ${shellQuote(enabledPath)}`,
           `rm -f ${shellQuote(httpsPath)}`,
           `rm -f ${shellQuote(bootstrapPath)}`,
+          `rm -f ${shellQuote(sslIncludePath)}`,
           "nginx -t",
           "systemctl reload nginx"
         ].join(" && ")
@@ -43,6 +47,7 @@ export async function runRemoveSiteFromServerAction(): Promise<void> {
           `sudo rm -f ${shellQuote(enabledPath)}`,
           `sudo rm -f ${shellQuote(httpsPath)}`,
           `sudo rm -f ${shellQuote(bootstrapPath)}`,
+          `sudo rm -f ${shellQuote(sslIncludePath)}`,
           "sudo nginx -t",
           "sudo systemctl reload nginx"
         ].join(" && ");
@@ -54,10 +59,16 @@ export async function runRemoveSiteFromServerAction(): Promise<void> {
   );
 
   if (removableLineage) {
+    const certbotExecutable = await resolveRemoteCertbotExecutable(server);
+
+    if (!certbotExecutable) {
+      throw new Error(`Could not determine which certbot executable to use on "${serverName}".`);
+    }
+
     const deleteCertCommand =
       server.user === "root"
-        ? `certbot delete --cert-name ${shellQuote(removableLineage)} --non-interactive`
-        : `sudo certbot delete --cert-name ${shellQuote(removableLineage)} --non-interactive`;
+        ? `${shellQuote(certbotExecutable)} delete --cert-name ${shellQuote(removableLineage)} --non-interactive`
+        : `sudo ${shellQuote(certbotExecutable)} delete --cert-name ${shellQuote(removableLineage)} --non-interactive`;
 
     await runForegroundCommand(
       "ssh",

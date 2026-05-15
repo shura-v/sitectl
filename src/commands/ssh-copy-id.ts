@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { promptText } from "../cli.js";
 import { runForegroundCommand } from "./utils/run-foreground-command.js";
-import { resolveServer } from "./utils/server-target.js";
+import { formatServerSshTarget, resolveServer } from "./utils/server-target.js";
 
 export async function runSshCopyIdCommand(): Promise<void> {
   const { server } = await resolveServer();
@@ -16,7 +16,7 @@ export async function runSshCopyIdCommand(): Promise<void> {
     sshCopyIdArgs.push("-i", expandUserPath(publicKeyPathInput));
   }
 
-  sshCopyIdArgs.push(`${server.user}@${server.address}`);
+  sshCopyIdArgs.push(formatServerSshTarget(server));
 
   await runForegroundCommand("ssh-copy-id", sshCopyIdArgs);
 }
