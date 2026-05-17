@@ -61,6 +61,22 @@ export async function writeConfig(config: SitectlConfig): Promise<void> {
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
+export async function ensureConfigFile(): Promise<string> {
+  const configPath = getConfigPath();
+
+  try {
+    await readFile(configPath, "utf8");
+    return configPath;
+  } catch (error) {
+    if (!isMissingFileError(error)) {
+      throw error;
+    }
+  }
+
+  await writeConfig(structuredClone(defaultConfig));
+  return configPath;
+}
+
 function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
   return Boolean(
     error &&

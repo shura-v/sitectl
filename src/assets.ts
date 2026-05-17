@@ -44,13 +44,52 @@ export async function readDataText(relativePath: string): Promise<string> {
 }
 
 export async function ensureBundledDataFiles(): Promise<void> {
+  await seedBundledDataFiles({ overwrite: false });
+}
+
+export async function seedBundledDataFiles(options: {
+  overwrite: boolean;
+}): Promise<void> {
   const sourceRootDirectoryUrl = getBundledConfigDirectoryUrl();
-  await seedBundledDirectory(sourceRootDirectoryUrl, sourceRootDirectoryUrl);
+  await seedBundledDirectory(sourceRootDirectoryUrl, sourceRootDirectoryUrl, options);
+}
+
+export async function hasDataDirectory(): Promise<boolean> {
+  try {
+    await access(getDataDirectoryPath());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function hasRequiredBundledDataFiles(): Promise<boolean> {
+  const requiredPaths = [
+    "remote/install-base-packages.json",
+    "remote/configure-zsh.json",
+    "remote/setup-ufw.json",
+    "remote/docker.json",
+    "remote/docker/install-docker.json",
+    "remote/docker/uninstall-docker.json"
+  ];
+
+  for (const relativePath of requiredPaths) {
+    try {
+      await access(getDataPath(relativePath));
+    } catch {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 async function seedBundledDirectory(
   currentSourceDirectoryUrl: URL,
-  sourceRootDirectoryUrl: URL
+  sourceRootDirectoryUrl: URL,
+  options: {
+    overwrite: boolean;
+  }
 ): Promise<void> {
   const entries = await readdir(currentSourceDirectoryUrl, { withFileTypes: true });
   const sourceRootDirectoryPath = fileURLToPath(sourceRootDirectoryUrl);
@@ -78,12 +117,18 @@ async function seedBundledDirectory(
       await mkdir(targetPath, { recursive: true });
       await seedBundledDirectory(
         new URL(`${entry.name}/`, currentSourceDirectoryUrl),
-        sourceRootDirectoryUrl
+        sourceRootDirectoryUrl,
+        options
       );
       continue;
     }
 
     await mkdir(dirname(targetPath), { recursive: true });
+
+    if (options.overwrite) {
+      await copyFile(sourceEntryUrl, targetPath);
+      continue;
+    }
 
     try {
       await access(targetPath);

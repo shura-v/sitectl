@@ -1,0 +1,6 @@
+{
+  "confirmation": "Are you sure you want to delete Docker containers, images, volumes, and package data?",
+  "name": "Uninstall Docker completely",
+  "hidden": false,
+  "order": 20
+}

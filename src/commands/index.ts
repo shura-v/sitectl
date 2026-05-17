@@ -3,11 +3,13 @@ import type { SelectOption } from "../cli.js";
 import { isPromptCancelledError, promptSelect } from "../cli.js";
 import { getConfigPath } from "../config.js";
 import { runManageServersFlow } from "./manage-servers/index.js";
+import { runRemoteCommandsFlow } from "./remote-commands.js";
 import { runManageSitesCommand } from "./manage-sites/index.js";
 import { runOpenDataDirCommand } from "./open-data-dir.js";
 
 type CommandId =
   | "manage-servers"
+  | "remote-commands"
   | "open-data-dir"
   | "manage-sites"
   | "exit";
@@ -31,6 +33,12 @@ const commandDefinitions: CommandDefinition[] = [
     label: "Manage sites",
     hint: "Add sites and copy bootstrap/http + https nginx configs",
     run: runManageSitesCommand
+  },
+  {
+    id: "remote-commands",
+    label: "Remote commands",
+    hint: "Run server-side automation commands against a selected server",
+    run: runRemoteCommandsFlow
   },
   {
     id: "open-data-dir",
