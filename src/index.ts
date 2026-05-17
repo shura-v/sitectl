@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   await ensureSiteTemplateFile();
 
   if (isSshInvocation(args)) {
-    await runSshCommand(args[1]);
+    await runSshCommand(args[1], args[2]);
     return;
   }
 
@@ -31,15 +31,15 @@ async function main(): Promise<void> {
 
   if (args.length > 0) {
     cancelWithMessage(
-      'Unknown command. Use "sitectl ssh [server-name]", "sitectl ssh-copy-id" or run without arguments.'
+      'Unknown command. Use "sitectl ssh [server-name] [command-string]", "sitectl ssh-copy-id" or run without arguments.'
     );
   }
 
   await runCommandFlow();
 }
 
-function isSshInvocation(args: string[]): args is ["ssh", string] {
-  return (args.length === 1 || args.length === 2) && args[0] === "ssh";
+function isSshInvocation(args: string[]): args is ["ssh"] | ["ssh", string] | ["ssh", string, string] {
+  return (args.length === 1 || args.length === 2 || args.length === 3) && args[0] === "ssh";
 }
 
 function isSshCopyIdInvocation(args: string[]): args is ["ssh-copy-id"] {

@@ -108,6 +108,7 @@ The non-interactive commands are:
 
 - `sitectl ssh`
 - `sitectl ssh <server-name>`
+- `sitectl ssh <server-name> '<full remote command string>'`
 - `sitectl ssh-copy-id`
 
 Remote automation assets live in:
@@ -241,6 +242,7 @@ SSH command:
 ```bash
 npm run ssh
 npm run ssh -- prod
+npm run ssh -- prod 'echo "hello world!"'
 npm run ssh-copy-id
 ```
 
@@ -249,6 +251,7 @@ After global install:
 ```bash
 sitectl ssh
 sitectl ssh prod
+sitectl ssh prod 'echo "hello world!"'
 sitectl ssh-copy-id
 ```
 
