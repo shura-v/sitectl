@@ -24,19 +24,10 @@ as_root apt install \
   nginx \
   certbot \
   python3-certbot-nginx \
-  ufw \
   curl \
   ca-certificates \
   rsync \
   git \
-  -y
-
-# Conditionally required for the default sitectl shell UX:
-# - zsh is used by the separate "Configure zsh" step
-# - oh-my-zsh is installed below for users who want the bundled prompt setup
-# If you do not use sitectl's zsh prompt customization, this section can be removed.
-as_root apt install \
-  zsh \
   -y
 
 # Optional quality-of-life packages:
@@ -58,10 +49,3 @@ as_root apt install \
 if dpkg -s unattended-upgrades >/dev/null 2>&1; then
   as_root dpkg-reconfigure -f noninteractive unattended-upgrades
 fi
-
-# Optional shell enhancement for the zsh workflow above.
-# Safe to remove if you want plain zsh without oh-my-zsh.
-export RUNZSH=no
-export CHSH=no
-export KEEP_ZSHRC=yes
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"

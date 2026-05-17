@@ -9,7 +9,13 @@ as_root() {
   fi
 }
 
-ssh_port="__SITECTL_SSH_PORT__"
+ssh_port="$(printf '%s\n' "${SSH_CONNECTION:-}" | awk '{ print $4 }')"
+
+if [ -z "${ssh_port}" ]; then
+  ssh_port="22"
+fi
+
+export DEBIAN_FRONTEND=noninteractive
 
 as_root apt install ufw -y
 as_root ufw allow "${ssh_port}/tcp"

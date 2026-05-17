@@ -1,6 +1,6 @@
 {
   "name": "sitectl",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "author": "Shura Vlasov",
   "description": "CLI toolkit for site operations.",
   "license": "MIT",
@@ -17,17 +17,21 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "changeset": "changeset",
     "dev": "npm run build && node dist/index.js",
-    "prepare": "npm run build && node scripts/seed-data.mjs",
+    "prepack": "npm run build",
+    "release": "npm run build && changeset publish",
     "ssh": "npm run build && node dist/index.js ssh",
     "ssh-copy-id": "npm run build && node dist/index.js ssh-copy-id",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "version-packages": "changeset version && npm install --package-lock-only"
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@types/node": "^24.10.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",

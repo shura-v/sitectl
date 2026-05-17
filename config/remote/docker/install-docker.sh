@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DEBIAN_FRONTEND=noninteractive
+
 as_root() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -9,10 +11,14 @@ as_root() {
   fi
 }
 
-export DEBIAN_FRONTEND=noninteractive
+conflicting_packages="$(
+  for pkg in docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc; do
+    if dpkg -s "$pkg" >/dev/null 2>&1; then
+      printf '%s\n' "$pkg"
+    fi
+  done
+)"
 
-# Uninstall all conflicting packages.
-conflicting_packages="$(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc | cut -f1)"
 if [ -n "${conflicting_packages}" ]; then
   as_root apt remove -y ${conflicting_packages}
 fi

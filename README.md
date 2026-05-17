@@ -1,15 +1,44 @@
 # sitectl
 
+[![CI](https://github.com/shura-v/sitectl/actions/workflows/ci.yml/badge.svg)](https://github.com/shura-v/sitectl/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/sitectl.svg)](https://www.npmjs.com/package/sitectl)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A simple CLI for bootstrapping Linux servers, nginx site configs, and TLS
 certificates.
+
+![Interactive sitectl workflow](docs/usage.gif)
+
+## Install
+
+```bash
+npm install -g sitectl
+sitectl init
+```
+
+Use `sitectl init --overwrite-bundled` to refresh bundled templates without replacing
+user-managed data such as `config.json` or per-site nginx configs.
+
+With `sitectl`, you can:
+
+- manage your server list locally
+- connect to servers over SSH and install your public key
+- run built-in remote commands on servers
+- add your own **custom remote commands and submenus**
+- manage nginx site configs
+- issue TLS certificates
+- enable and disable HTTPS on a site
+- remove site configs from a server
 
 It is opinionated, but customizable:
 - today it is biased toward Debian-like servers because the bootstrap/install
   flow is written for `apt`, `nginx`, `certbot`, `ufw`, and related packages
-- after install, you can edit the data files in `~/.config/sitectl/` however you
-  want and adapt the tool to your own setup
+- after `sitectl init`, you can adapt the user-managed files in
+  `~/.config/sitectl/` to your own setup
 - the main nginx customization point is
   `~/.config/sitectl/nginx/sites/nginx-template.conf`
+- one of the main customization points is `Remote commands`, which can be
+  extended with your own scripts and submenus
 - local development and test commands require Node.js 20 or newer
 
 This is a CLI-only utility for interactive local use. It is not intended for CI
@@ -17,19 +46,24 @@ or hermetic automation environments.
 
 The workflow is interactive only:
 
+- run `sitectl init` once
 - start `sitectl`
 - choose an action from the menu
 - follow the prompts
 
-## Demo
+## What It Does
 
-![Interactive sitectl workflow](docs/usage.gif)
+There are three main areas in `sitectl`:
 
-## Setup
+- `Manage servers`
+  Keeps a local registry of servers and gives you quick `ssh` / `ssh-copy-id`
+  flows.
+- `Remote commands`
+  Runs built-in and custom server-side commands on a selected server.
+- `Manage sites`
+  Manages nginx site configs, certificate issuance, and HTTP/HTTPS switching.
 
-```bash
-npm install -g sitectl
-```
+## Support
 
 `sitectl` is intended to run on Unix-like systems.
 
@@ -67,58 +101,95 @@ brew install rsync
   typically provided by your desktop environment or `xdg-utils`.
 - On Windows, use WSL and install the Linux dependencies inside WSL.
 
+## Custom Remote Commands
+
+One of the main features of `sitectl` is that `Remote commands` is not a hardcoded
+menu. You can add your own server-side commands and submenus by dropping files
+into `~/.config/sitectl/remote/`.
+
+That means you can keep using the built-in commands, but also grow your own
+library of deploy scripts, maintenance routines, bootstrap steps, and dangerous
+ops with explicit confirmation prompts.
+
+## Remote Command Discovery
+
+Remote command menus are discovered from matching metadata files:
+
+- `foo.sh` + `foo.json` becomes a command
+- `folder/` + `folder.json` becomes a submenu
+- files without matching `.json` metadata are ignored
+- optional `order` sorts items inside the current menu; items without `order`
+  are shown after ordered items and use alphabetical order as a tie-breaker
+
+## Remote Command Metadata
+
+Shape for remote metadata:
+
+```ts
+{
+  name: string;
+  order?: number;
+  hidden?: boolean;
+  confirmation?: string;
+}
+```
+
+## Remote Command Example
+
+Examples:
+
+```text
+remote/
+  backups.sh
+  backups.json
+  docker/
+    uninstall-docker.sh
+    uninstall-docker.json
+  docker.json
+```
+
+```json
+{
+  "name": "Uninstall Docker completely",
+  "order": 20,
+  "confirmation": "Are you sure you want to delete Docker containers, images, volumes, and package data?"
+}
+```
+
 ## Menu
 
-Main menu:
-
 - `Manage servers`
+  - `Add server`
+  - `Edit server`
+  - `Delete server`
+  - `SSH copy id`
+  - `SSH`
 - `Manage sites`
+  - `Add site`
+  - `Open nginx.conf`
+  - `Copy conf files to server`
+  - `Issue certificate`
+  - `Enable https`
+  - `Disable https`
+  - `Remove site from server`
+- `Remote commands`
+  - `Install base packages`
+  - `Docker`
+    - `Install Docker`
+    - `Uninstall Docker completely`
+  - `Configure zsh`
+  - `Setup ufw`
+  - `...your custom commands...`
 - `Open data dir`
-- `Exit`
-
-`Manage servers`:
-
-- `Add server`
-- `Edit server`
-- `Delete server`
-- `Install base packages`
-- `Docker`
-- `Configure zsh`
-- `Setup ufw`
-- `Back`
-
-`Manage servers -> Docker`:
-
-- `Install Docker`
-- `Uninstall Docker`
-- `Back`
-
-`Manage sites`:
-
-- `Add site`
-- `Open nginx.conf`
-- `Copy conf files to server`
-- `Issue certificate`
-- `Enable https`
-- `Disable https`
-- `Remove site from server`
-- `Back`
 
 The non-interactive commands are:
 
+- `sitectl init`
+- `sitectl init --overwrite-bundled`
 - `sitectl ssh`
 - `sitectl ssh <server-name>`
 - `sitectl ssh <server-name> '<full remote command string>'`
 - `sitectl ssh-copy-id`
-
-Remote automation assets live in:
-
-- `~/.config/sitectl/remote/install-base-packages.sh`
-- `~/.config/sitectl/remote/docker/install-docker.sh`
-- `~/.config/sitectl/remote/docker/uninstall-docker.sh`
-- `~/.config/sitectl/remote/configure-zsh.sh`
-- `~/.config/sitectl/remote/myzshrc.zsh`
-- `~/.config/sitectl/remote/setup-ufw.sh`
 
 For nginx site deployment, `sitectl` guarantees compatibility only for configs
 that keep using its managed include files under `/etc/nginx/sitectl-includes/`
@@ -136,11 +207,11 @@ Nginx site registry lives in:
 Typical flow for a new VPS:
 
 1. `Add server`
-2. `sitectl ssh-copy-id`
-3. `Install base packages`
-4. `Install docker` if needed
-5. `Configure zsh`
-6. `Setup ufw`
+2. `SSH copy id`
+3. `Remote commands -> Install base packages`
+4. `Remote commands -> Docker -> Install Docker` if needed
+5. `Remote commands -> Configure zsh`
+6. `Remote commands -> Setup ufw`
 
 What those actions do:
 
@@ -155,11 +226,12 @@ What those actions do:
 - `Install docker`
   Installs Docker CE and the Docker Compose plugin from Docker's apt
   repository.
-- `Uninstall docker`
-  Removes Docker packages and permanently deletes Docker data, including
+- `Uninstall docker completely`
+  Completely removes Docker packages and permanently deletes Docker data, including
   containers, images, networks, and volumes.
 - `Configure zsh`
-  Installs the custom shell config from `~/.config/sitectl/remote/`.
+  Installs `zsh` and `oh-my-zsh` if needed, then applies the custom shell
+  config bundled inside `~/.config/sitectl/remote/configure-zsh.sh`.
 - `Setup ufw`
   Applies the default firewall rules for SSH, HTTP, and HTTPS.
 
@@ -281,6 +353,3 @@ Built CLI also starts without arguments:
 ```bash
 node dist/index.js
 ```
-
-Defaults are seeded from the packaged `config/` files during `prepare`, and the
-runtime still recreates a missing file on demand if needed.

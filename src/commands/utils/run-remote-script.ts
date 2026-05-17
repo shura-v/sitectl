@@ -4,7 +4,10 @@ import { formatServerSshTarget } from "./server-target.js";
 
 export async function runRemoteScript(
   server: ServerConfig,
-  script: string
+  script: string,
+  options?: {
+    env?: Record<string, string>;
+  }
 ): Promise<void> {
   const sshArgs = [
     "-p",
@@ -17,7 +20,7 @@ export async function runRemoteScript(
     stdio: ["pipe", "inherit", "inherit"]
   });
 
-  child.stdin.write(script);
+  child.stdin.write(buildRemoteScriptInput(script, options?.env));
   child.stdin.end();
 
   const result = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
@@ -36,4 +39,23 @@ export async function runRemoteScript(
   if (result.code && result.code !== 0) {
     throw new Error(`Remote script failed with exit code ${result.code}.`);
   }
+}
+
+function buildRemoteScriptInput(
+  script: string,
+  env?: Record<string, string>
+): string {
+  if (!env || Object.keys(env).length === 0) {
+    return script;
+  }
+
+  const exports = Object.entries(env)
+    .map(([key, value]) => `export ${key}=${shellSingleQuote(value)}`)
+    .join("\n");
+
+  return `${exports}\n${script}`;
+}
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DEBIAN_FRONTEND=noninteractive
+
 as_root() {
   if [ "$(id -u)" -eq 0 ]; then
     "$@"
@@ -8,8 +10,6 @@ as_root() {
     sudo "$@"
   fi
 }
-
-export DEBIAN_FRONTEND=noninteractive
 
 as_root systemctl stop docker.service docker.socket containerd.service 2>/dev/null || true
 

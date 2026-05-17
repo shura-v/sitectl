@@ -1,6 +1,5 @@
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import {
-  ensureDataDirectory,
   getDataPath,
   readBundledConfigText,
   readDataText
@@ -20,7 +19,7 @@ export async function listSiteNames(): Promise<string[]> {
 }
 
 export async function listSites(): Promise<SiteRecord[]> {
-  const sitesDirectoryPath = await ensureDataDirectory("nginx/sites");
+  const sitesDirectoryPath = getSitesDirectoryPath();
   const entries = await readdir(sitesDirectoryPath, { withFileTypes: true });
   const siteNames = entries
     .filter((entry) => entry.isDirectory())
@@ -132,13 +131,25 @@ export function joinTemplateSections(...sections: string[]): string {
 }
 
 export async function ensureSiteTemplateFile(): Promise<string> {
+  return initializeSiteTemplateFile({ overwrite: false });
+}
+
+export async function initializeSiteTemplateFile(options: {
+  overwrite: boolean;
+}): Promise<string> {
   const templatePath = getSiteTemplatePath();
+  const template = await readBundledDefaultSiteTemplate();
+
+  if (options.overwrite) {
+    await mkdir(getSitesDirectoryPath(), { recursive: true });
+    await writeFile(templatePath, template, "utf8");
+    return templatePath;
+  }
 
   try {
     await access(templatePath);
     return templatePath;
   } catch {
-    const template = await readBundledDefaultSiteTemplate();
     await mkdir(getSitesDirectoryPath(), { recursive: true });
     await writeFile(templatePath, template, "utf8");
     return templatePath;

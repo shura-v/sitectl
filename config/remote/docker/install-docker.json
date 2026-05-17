@@ -1,0 +1,6 @@
+{
+  "confirmation": "Docker may already be installed or conflicting packages may be removed. Continue?",
+  "name": "Install Docker",
+  "hidden": false,
+  "order": 10
+}
