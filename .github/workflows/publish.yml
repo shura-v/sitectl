@@ -33,6 +33,11 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Check npm auth
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create release PR or publish to npm
         uses: changesets/action@v1
         with:
