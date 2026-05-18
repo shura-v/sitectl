@@ -1,5 +1,11 @@
 # sitectl
 
+## 0.2.1
+
+### Patch Changes
+
+- 3c9ddc6: Adjust the npm publish workflow to use `NODE_AUTH_TOKEN` with Changesets.
+
 ## 0.2.0
 
 ### Minor Changes
