@@ -1,5 +1,13 @@
 # sitectl
 
+## 0.2.3
+
+### Patch Changes
+
+- 664c272: Add a `Sync files to server` command for uploading one local file or directory to a configured server with rsync.
+
+  Raise the minimum supported Node.js version to 22.17.
+
 ## 0.2.2
 
 ### Patch Changes
