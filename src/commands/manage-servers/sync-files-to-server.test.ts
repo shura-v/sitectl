@@ -1,8 +1,9 @@
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { buildRsyncArgs, resolveLocalSourcePath } from "./sync-files-to-server.js";
+import { buildUploadRsyncArgs } from "../utils/rsync.js";
 
 describe("buildRsyncArgs", () => {
   it("builds rsync argv for a single literal local source path", () => {
@@ -48,6 +49,105 @@ describe("buildRsyncArgs", () => {
       "deploy@203.0.113.10:~/'My App'/'a[1]'/"
     ]);
   });
+
+  it("includes a custom rsync-path when provided", () => {
+    const args = buildRsyncArgs({
+      localSourcePath: "./bundle.tgz",
+      remotePath: "/tmp/releases/bundle.tgz",
+      rsyncPath: "sudo rsync",
+      server: {
+        address: "203.0.113.10",
+        flag: "🌍",
+        port: 22,
+        user: "deploy"
+      }
+    });
+
+    expect(args).toEqual([
+      "-avz",
+      "-e",
+      "ssh -p 22",
+      "--rsync-path",
+      "sudo rsync",
+      "--",
+      "./bundle.tgz",
+      "deploy@203.0.113.10:/tmp/releases/bundle.tgz"
+    ]);
+  });
+});
+
+describe("buildUploadRsyncArgs", () => {
+  it("does not force sudo for non-root uploads", () => {
+    const args = buildUploadRsyncArgs({
+      localSourcePath: "./bundle.tgz",
+      remotePath: "/tmp/releases/bundle.tgz",
+      server: {
+        address: "203.0.113.10",
+        flag: "🌍",
+        port: 22,
+        user: "deploy"
+      }
+    });
+
+    expect(args).toEqual([
+      "-avz",
+      "-e",
+      "ssh -p 22",
+      "--rsync-path",
+      "mkdir -p /tmp/releases && rsync",
+      "--",
+      "./bundle.tgz",
+      "deploy@203.0.113.10:/tmp/releases/bundle.tgz"
+    ]);
+  });
+
+  it("uses sudo for non-root uploads into privileged system paths", () => {
+    const args = buildUploadRsyncArgs({
+      localSourcePath: "./bundle.tgz",
+      remotePath: "/etc/my-app/config.json",
+      server: {
+        address: "203.0.113.10",
+        flag: "🌍",
+        port: 22,
+        user: "deploy"
+      }
+    });
+
+    expect(args).toEqual([
+      "-avz",
+      "-e",
+      "ssh -p 22",
+      "--rsync-path",
+      "sudo mkdir -p /etc/my-app && sudo rsync",
+      "--",
+      "./bundle.tgz",
+      "deploy@203.0.113.10:/etc/my-app/config.json"
+    ]);
+  });
+
+  it("creates the destination directory itself when the remote path ends with a slash", () => {
+    const args = buildUploadRsyncArgs({
+      localSourcePath: "./bundle.tgz",
+      remotePath: "/tmp/releases/",
+      server: {
+        address: "203.0.113.10",
+        flag: "🌍",
+        port: 22,
+        user: "deploy"
+      }
+    });
+
+    expect(args).toEqual([
+      "-avz",
+      "-e",
+      "ssh -p 22",
+      "--rsync-path",
+      "mkdir -p /tmp/releases/ && rsync",
+      "--",
+      "./bundle.tgz",
+      "deploy@203.0.113.10:/tmp/releases/"
+    ]);
+  });
 });
 
 describe("resolveLocalSourcePath", () => {
@@ -90,5 +190,9 @@ describe("resolveLocalSourcePath", () => {
     await writeFile(filePath, "{}", "utf8");
 
     await expect(resolveLocalSourcePath(filePath)).resolves.toBe(filePath);
+  });
+
+  it("expands a leading tilde before checking whether a local path exists", async () => {
+    await expect(resolveLocalSourcePath("~")).resolves.toBe(homedir());
   });
 });

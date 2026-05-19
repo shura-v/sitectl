@@ -2,7 +2,14 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
-import { discoverRemoteMenuEntriesInDirectory } from "./remote-commands.js";
+import {
+  buildRemoteCommandResolutionError,
+  discoverRemoteMenuEntriesInDirectory,
+  findRemoteMenuEntryByFilePathSegments,
+  formatRunnableRemoteCommandList,
+  resolveRemoteMenuEntryByFilePathSegments,
+  shouldPromptForRemoteCommandConfirmation
+} from "./remote-commands.js";
 
 const tempDirectories: string[] = [];
 
@@ -98,6 +105,50 @@ describe("discoverRemoteMenuEntriesInDirectory", () => {
     );
   });
 
+  it("throws when uploads is not an array", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "upload.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(join(root, "upload.json"), JSON.stringify({ name: "Upload", uploads: true }));
+
+    await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
+      'Remote metadata "upload.json" must contain an array "uploads" when provided.'
+    );
+  });
+
+  it("throws when an upload entry has no from value", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "upload.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "upload.json"),
+      JSON.stringify({ name: "Upload", uploads: [{ to: "/tmp/file.txt" }] })
+    );
+
+    await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
+      'Remote metadata "upload.json" upload #1 must contain a non-empty "from" string.'
+    );
+  });
+
+  it("accepts uploads metadata on a command", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "upload.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "upload.json"),
+      JSON.stringify({
+        name: "Upload",
+        uploads: [{ from: "./dist/*.tgz", to: "/tmp/releases/build.tgz" }]
+      })
+    );
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      kind: "command",
+      name: "Upload",
+      relativePath: "upload.sh"
+    });
+  });
+
   it("sorts by order first and then by name, with missing order at the bottom", async () => {
     const root = await createTempDirectory();
     await writeFile(join(root, "gamma.sh"), "#!/usr/bin/env bash\n");
@@ -112,6 +163,120 @@ describe("discoverRemoteMenuEntriesInDirectory", () => {
     const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
 
     expect(entries.map((entry) => entry.name)).toEqual(["First", "Alpha", "Beta", "Gamma"]);
+  });
+});
+
+describe("findRemoteMenuEntryByFilePathSegments", () => {
+  it("resolves a nested command by its file path segments", async () => {
+    const root = await createTempDirectory();
+    await mkdir(join(root, "docker"));
+    await writeFile(join(root, "docker.json"), JSON.stringify({ name: "Docker" }));
+    await writeFile(join(root, "docker", "install-docker.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "docker", "install-docker.json"),
+      JSON.stringify({ name: "Install Docker" })
+    );
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+    const entry = findRemoteMenuEntryByFilePathSegments(entries, ["docker", "install-docker"]);
+
+    expect(entry).toMatchObject({
+      kind: "command",
+      name: "Install Docker",
+      relativePath: "docker/install-docker.sh"
+    });
+  });
+
+  it("returns a submenu when the file path ends at a submenu", async () => {
+    const root = await createTempDirectory();
+    await mkdir(join(root, "docker"));
+    await writeFile(join(root, "docker.json"), JSON.stringify({ name: "Docker" }));
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+    const entry = findRemoteMenuEntryByFilePathSegments(entries, ["docker"]);
+
+    expect(entry).toMatchObject({
+      kind: "submenu",
+      name: "Docker",
+      relativePath: "docker"
+    });
+  });
+
+  it("returns undefined for a missing file path", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "deploy.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(join(root, "deploy.json"), JSON.stringify({ name: "Deploy to prod" }));
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+    const entry = findRemoteMenuEntryByFilePathSegments(entries, ["missing-command"]);
+
+    expect(entry).toBeUndefined();
+  });
+});
+
+describe("formatRunnableRemoteCommandList", () => {
+  it("flattens nested runnable commands using file path syntax", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "deploy.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(join(root, "deploy.json"), JSON.stringify({ name: "Deploy to prod" }));
+    await mkdir(join(root, "docker"));
+    await writeFile(join(root, "docker.json"), JSON.stringify({ name: "Docker" }));
+    await writeFile(join(root, "docker", "install-docker.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "docker", "install-docker.json"),
+      JSON.stringify({ name: "Install Docker" })
+    );
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+
+    expect(formatRunnableRemoteCommandList(entries)).toBe(
+      "- deploy: Deploy to prod\n- docker/install-docker: Install Docker"
+    );
+  });
+});
+
+describe("shouldPromptForRemoteCommandConfirmation", () => {
+  it("keeps confirmations for interactive menu runs", () => {
+    expect(shouldPromptForRemoteCommandConfirmation()).toBe(true);
+  });
+
+  it("skips confirmations for non-interactive cli runs", () => {
+    expect(shouldPromptForRemoteCommandConfirmation("my-server")).toBe(false);
+  });
+});
+
+describe("buildRemoteCommandResolutionError", () => {
+  it("shows submenu contents when the path ends at a submenu", async () => {
+    const root = await createTempDirectory();
+    await mkdir(join(root, "docker"));
+    await writeFile(join(root, "docker.json"), JSON.stringify({ name: "Docker" }));
+    await writeFile(join(root, "docker", "install-docker.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "docker", "install-docker.json"),
+      JSON.stringify({ name: "Install Docker" })
+    );
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+    const resolution = resolveRemoteMenuEntryByFilePathSegments(entries, ["docker"]);
+
+    expect(buildRemoteCommandResolutionError(["docker"], resolution)).toBe(
+      'Remote command path points to a submenu, not a command: docker.\nAvailable entries in remote/docker/:\n- install-docker: Install Docker (command)'
+    );
+  });
+
+  it("shows available entries on the current level when a path segment is missing", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "deploy.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(join(root, "deploy.json"), JSON.stringify({ name: "Deploy to prod" }));
+    await mkdir(join(root, "docker"));
+    await writeFile(join(root, "docker.json"), JSON.stringify({ name: "Docker" }));
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+    const resolution = resolveRemoteMenuEntryByFilePathSegments(entries, ["missing-command"]);
+
+    expect(buildRemoteCommandResolutionError(["missing-command"], resolution)).toBe(
+      'Remote command not found: missing-command.\nAvailable entries in remote/:\n- deploy: Deploy to prod (command)\n- docker: Docker (submenu)'
+    );
   });
 });
 

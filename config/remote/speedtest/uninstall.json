@@ -1,0 +1,5 @@
+{
+  "name": "Uninstall speedtest",
+  "confirmation": "This will remove speedtest and its Ookla apt source. Continue?",
+  "hidden": false
+}
