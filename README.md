@@ -39,7 +39,7 @@ It is opinionated, but customizable:
   `~/.config/sitectl/nginx/sites/nginx-template.conf`
 - one of the main customization points is `Remote commands`, which can be
   extended with your own scripts and submenus
-- local development and test commands require Node.js 20 or newer
+- local development and test commands require Node.js 22.17 or newer
 
 This is a CLI-only utility for interactive local use. It is not intended for CI
 or hermetic automation environments.
@@ -82,7 +82,7 @@ Native Windows is not supported at the moment.
 
 Required local dependencies:
 
-- Node.js 20+
+- Node.js 22.17+
 - npm
 - `ssh`
 - `rsync`

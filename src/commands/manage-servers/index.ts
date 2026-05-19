@@ -4,6 +4,7 @@ import { isPromptCancelledError, promptSelect } from "../../cli.js";
 import { runAddServerCommand } from "./add-server.js";
 import { runDeleteServerCommand } from "./delete-server.js";
 import { runEditServerCommand } from "./edit-server.js";
+import { runSyncFilesToServerCommand } from "./sync-files-to-server.js";
 import { runSshCommand } from "../ssh.js";
 import { runSshCopyIdCommand } from "../ssh-copy-id.js";
 
@@ -11,6 +12,7 @@ type ServerCommandId =
   | "add-server"
   | "edit-server"
   | "delete-server"
+  | "sync-files-to-server"
   | "ssh-copy-id"
   | "ssh"
   | "back";
@@ -38,6 +40,12 @@ const serverCommandDefinitions: Array<{
     label: "Delete server",
     hint: "Remove a saved server record",
     run: runDeleteServerCommand
+  },
+  {
+    id: "sync-files-to-server",
+    label: "Sync files to server",
+    hint: "Rsync local files, globs, or folders to a server path",
+    run: runSyncFilesToServerCommand
   },
   {
     id: "ssh-copy-id",
