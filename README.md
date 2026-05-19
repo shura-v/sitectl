@@ -7,6 +7,9 @@
 A simple CLI for bootstrapping Linux servers, nginx site configs, and TLS
 certificates.
 
+It is primarily intended for admin-style management of personal or small-scale
+VPS/VDS hosts.
+
 ![Interactive sitectl workflow](docs/usage.gif)
 
 ## Install
@@ -19,10 +22,22 @@ sitectl init
 Use `sitectl init --overwrite-bundled` to refresh bundled templates without replacing
 user-managed data such as `config.json` or per-site nginx configs.
 
+## What It Does
+
+There are three main areas in `sitectl`:
+
+- `Manage servers`
+  Keeps a local registry of servers, gives you quick `ssh` / `ssh-copy-id` flows,
+  and lets you sync local files to a selected server over `rsync`.
+- `Manage sites`
+  Manages nginx site configs, certificate issuance, and HTTP/HTTPS switching.
+- `Remote commands`
+  Runs built-in and custom server-side commands on a selected server.
+
 With `sitectl`, you can:
 
 - manage your server list locally
-- connect to servers over SSH and install your public key
+- connect to servers over SSH, install your public key, and sync local files
 - run built-in remote commands on servers
 - add your own **custom remote commands and submenus**
 - manage nginx site configs
@@ -50,18 +65,6 @@ The workflow is interactive only:
 - start `sitectl`
 - choose an action from the menu
 - follow the prompts
-
-## What It Does
-
-There are three main areas in `sitectl`:
-
-- `Manage servers`
-  Keeps a local registry of servers and gives you quick `ssh` / `ssh-copy-id`
-  flows.
-- `Remote commands`
-  Runs built-in and custom server-side commands on a selected server.
-- `Manage sites`
-  Manages nginx site configs, certificate issuance, and HTTP/HTTPS switching.
 
 ## Support
 
@@ -111,6 +114,21 @@ That means you can keep using the built-in commands, but also grow your own
 library of deploy scripts, maintenance routines, bootstrap steps, and dangerous
 ops with explicit confirmation prompts.
 
+Built-in bundled remote commands include base package setup, Docker helpers,
+firewall setup, shell setup, and a `Speedtest` submenu for installing, running,
+and removing the Ookla CLI.
+
+You can run those commands either from the interactive menu or directly from the
+CLI with:
+
+```bash
+sitectl run docker/install-docker my-server
+```
+
+The first argument is the command path inside `~/.config/sitectl/remote/`, using
+folder names plus the command basename without the file extension. The second
+argument is the configured server name.
+
 ## Remote Command Discovery
 
 Remote command menus are discovered from matching metadata files:
@@ -131,8 +149,25 @@ Shape for remote metadata:
   order?: number;
   hidden?: boolean;
   confirmation?: string;
+  uploads?: Array<{
+    from: string;
+    to: string;
+  }>;
 }
 ```
+
+When `uploads` is present, `sitectl` uploads those local paths before it starts the
+remote script:
+
+- `from` is a local file or directory path on the machine running `sitectl`
+- `from` also supports a glob, but it must resolve to exactly one path
+- `to` is the final destination path on the remote server
+- parent directories for `to` are created automatically before `rsync` runs
+- the remote script starts only after every upload succeeds
+
+This is useful when a remote command needs a local file first, for example to
+restore backups, replace a database, upload a release artifact, send config
+files, or stage migration data before the server-side script runs.
 
 ## Remote Command Example
 
@@ -156,12 +191,31 @@ remote/
 }
 ```
 
+Upload example:
+
+```json
+{
+  "name": "Replace 3x-ui DB",
+  "confirmation": "This will overwrite the remote 3x-ui database. Continue?",
+  "uploads": [
+    {
+      "from": "~/Backups/x-ui.db",
+      "to": "/tmp/sitectl/3x-ui-replace-db/x-ui.db"
+    }
+  ]
+}
+```
+
+That command can then use a remote shell script that moves the uploaded file into
+place, restarts services, or performs any other server-side steps it needs.
+
 ## Menu
 
 - `Manage servers`
   - `Add server`
   - `Edit server`
   - `Delete server`
+  - `Sync files to server`
   - `SSH copy id`
   - `SSH`
 - `Manage sites`
@@ -177,6 +231,10 @@ remote/
   - `Docker`
     - `Install Docker`
     - `Uninstall Docker completely`
+  - `Speedtest`
+    - `Install speedtest`
+    - `Run speedtest`
+    - `Uninstall speedtest`
   - `Configure zsh`
   - `Setup ufw`
   - `...your custom commands...`
@@ -186,6 +244,7 @@ The non-interactive commands are:
 
 - `sitectl init`
 - `sitectl init --overwrite-bundled`
+- `sitectl run <command> <server_name>`
 - `sitectl ssh`
 - `sitectl ssh <server-name>`
 - `sitectl ssh <server-name> '<full remote command string>'`
@@ -220,6 +279,10 @@ What those actions do:
 - `sitectl ssh-copy-id`
   Installs your SSH public key on the target server so the rest of the workflow
   can work over key-based SSH.
+- `Sync files to server`
+  Uploads a local file or directory to a chosen remote destination over `rsync`.
+  Useful for one-off copies into `/tmp`, home-directory paths like `~/uploads/`,
+  or other server-side locations before you run follow-up commands.
 - `Install base packages`
   Runs the opinionated bootstrap script for supported Debian and Ubuntu
   servers.

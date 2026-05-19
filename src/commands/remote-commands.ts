@@ -4,7 +4,14 @@ import { basename, extname, join } from "node:path";
 import { posix as pathPosix } from "node:path";
 import { getDataPath, readDataText } from "../assets.js";
 import type { SelectOption } from "../cli.js";
-import { isPromptCancelledError, promptConfirm, promptSelect } from "../cli.js";
+import {
+  FriendlyMessageError,
+  isPromptCancelledError,
+  promptConfirm,
+  promptSelect
+} from "../cli.js";
+import { buildUploadRsyncArgs, resolveLocalSourcePath } from "./utils/rsync.js";
+import { runForegroundCommand } from "./utils/run-foreground-command.js";
 import { runRemoteScript } from "./utils/run-remote-script.js";
 import { resolveServer } from "./utils/server-target.js";
 
@@ -16,7 +23,7 @@ export type RemoteCommandEntry = {
   name: string;
   order?: number;
   relativePath: string;
-  run: () => Promise<void>;
+  run: (serverName?: string) => Promise<void>;
 };
 
 export type RemoteSubmenuEntry = {
@@ -32,6 +39,12 @@ type RemoteCommandMetadata = {
   hidden?: boolean;
   name: string;
   order?: number;
+  uploads?: RemoteCommandUpload[];
+};
+
+type RemoteCommandUpload = {
+  from: string;
+  to: string;
 };
 
 export async function runRemoteCommandsFlow(): Promise<void> {
@@ -45,6 +58,30 @@ export async function runRemoteCommandsFlow(): Promise<void> {
 
 export async function discoverRemoteMenuEntries(): Promise<RemoteMenuEntry[]> {
   return discoverRemoteMenuEntriesInDirectory(getDataPath("remote"), "");
+}
+
+export async function runRemoteCommandByFilePathSegments(
+  pathSegments: string[],
+  serverName: string
+): Promise<void> {
+  if (pathSegments.length === 0) {
+    throw new Error("Remote command path is required.");
+  }
+
+  const resolution = resolveRemoteMenuEntryByFilePathSegments(
+    await discoverRemoteMenuEntries(),
+    pathSegments
+  );
+
+  if (!resolution.entry) {
+    throw new FriendlyMessageError(buildRemoteCommandResolutionError(pathSegments, resolution));
+  }
+
+  if (resolution.entry.kind !== "command") {
+    throw new FriendlyMessageError(buildRemoteCommandResolutionError(pathSegments, resolution));
+  }
+
+  await resolution.entry.run(serverName);
 }
 
 export async function discoverRemoteMenuEntriesInDirectory(
@@ -118,11 +155,97 @@ export async function discoverRemoteMenuEntriesInDirectory(
       name: metadata.name,
       order: metadata.order,
       relativePath: commandRelativePath,
-      run: buildRemoteCommandRunner(commandRelativePath, metadata.name, metadata.confirmation)
+      run: buildRemoteCommandRunner(
+        commandRelativePath,
+        metadata.name,
+        metadata.confirmation,
+        metadata.uploads
+      )
     });
   }
 
   return discoveredEntries.sort(compareRemoteMenuEntries);
+}
+
+export function findRemoteMenuEntryByFilePathSegments(
+  entries: RemoteMenuEntry[],
+  pathSegments: string[]
+): RemoteMenuEntry | undefined {
+  return resolveRemoteMenuEntryByFilePathSegments(entries, pathSegments).entry;
+}
+
+export function formatRunnableRemoteCommandList(entries: RemoteMenuEntry[]): string {
+  const commands = collectRunnableRemoteCommands(entries);
+
+  if (commands.length === 0) {
+    return "(empty)";
+  }
+
+  return commands.map((command) => `- ${command.path}: ${command.name}`).join("\n");
+}
+
+export function shouldPromptForRemoteCommandConfirmation(serverName?: string): boolean {
+  return serverName === undefined;
+}
+
+export function buildRemoteCommandResolutionError(
+  pathSegments: string[],
+  resolution: {
+    availableEntries: RemoteMenuEntry[];
+    entry?: RemoteMenuEntry;
+    resolvedSegments: string[];
+  }
+): string {
+  if (!resolution.entry) {
+    return [
+      `Remote command not found: ${formatRemoteCommandFilePath(pathSegments)}.`,
+      `Available entries in ${formatRemoteCommandLocation(resolution.resolvedSegments)}:`,
+      formatRemoteEntryList(resolution.availableEntries)
+    ].join("\n");
+  }
+
+  if (resolution.entry.kind !== "command") {
+    return [
+      `Remote command path points to a submenu, not a command: ${formatRemoteCommandFilePath(pathSegments)}.`,
+      `Available entries in ${formatRemoteCommandLocation(pathSegments)}:`,
+      formatRemoteEntryList(resolution.entry.entries)
+    ].join("\n");
+  }
+
+  return `Remote command path did not resolve to a runnable command: ${formatRemoteCommandFilePath(pathSegments)}.`;
+}
+
+export function resolveRemoteMenuEntryByFilePathSegments(
+  entries: RemoteMenuEntry[],
+  pathSegments: string[]
+): {
+  availableEntries: RemoteMenuEntry[];
+  entry?: RemoteMenuEntry;
+  resolvedSegments: string[];
+} {
+  let currentEntries = entries;
+  let currentEntry: RemoteMenuEntry | undefined;
+  const resolvedSegments: string[] = [];
+
+  for (const segment of pathSegments) {
+    currentEntry = currentEntries.find((entry) => getRemoteEntryPathSegment(entry) === segment);
+
+    if (!currentEntry) {
+      return {
+        availableEntries: currentEntries,
+        resolvedSegments
+      };
+    }
+
+    resolvedSegments.push(segment);
+    currentEntries = currentEntry.kind === "submenu" ? currentEntry.entries : [];
+  }
+
+  return {
+    availableEntries: currentEntries,
+    entry: currentEntry,
+    resolvedSegments
+  };
 }
 
 async function runRemoteMenuFlow(options: {
@@ -189,11 +312,41 @@ async function readRemoteCommandMetadata(
     throw new Error(`Remote metadata "${displayPath}" must contain a numeric "order" when provided.`);
   }
 
+  if (parsed.uploads !== undefined) {
+    if (!Array.isArray(parsed.uploads)) {
+      throw new Error(`Remote metadata "${displayPath}" must contain an array "uploads" when provided.`);
+    }
+
+    for (const [index, upload] of parsed.uploads.entries()) {
+      if (!upload || typeof upload !== "object" || Array.isArray(upload)) {
+        throw new Error(
+          `Remote metadata "${displayPath}" upload #${index + 1} must be an object with non-empty "from" and "to" strings.`
+        );
+      }
+
+      if (typeof upload.from !== "string" || upload.from.trim().length === 0) {
+        throw new Error(
+          `Remote metadata "${displayPath}" upload #${index + 1} must contain a non-empty "from" string.`
+        );
+      }
+
+      if (typeof upload.to !== "string" || upload.to.trim().length === 0) {
+        throw new Error(
+          `Remote metadata "${displayPath}" upload #${index + 1} must contain a non-empty "to" string.`
+        );
+      }
+    }
+  }
+
   return {
     confirmation: parsed.confirmation?.trim() || undefined,
     hidden: parsed.hidden ?? false,
     name: parsed.name.trim(),
-    order: parsed.order
+    order: parsed.order,
+    uploads: parsed.uploads?.map((upload) => ({
+      from: upload.from.trim(),
+      to: upload.to.trim()
+    }))
   };
 }
 
@@ -254,19 +407,82 @@ function joinRemotePath(...segments: string[]): string {
   return pathPosix.join(...segments.filter((segment) => segment.length > 0));
 }
 
+function formatRemoteCommandFilePath(pathSegments: string[]): string {
+  return pathSegments.join("/");
+}
+
+function formatRemoteCommandLocation(pathSegments: string[]): string {
+  return pathSegments.length === 0 ? "remote/" : `remote/${formatRemoteCommandFilePath(pathSegments)}/`;
+}
+
+function formatRemoteEntryList(entries: RemoteMenuEntry[]): string {
+  if (entries.length === 0) {
+    return "(empty)";
+  }
+
+  return entries
+    .map((entry) => {
+      const kindDescription = entry.kind === "submenu" ? "submenu" : "command";
+      return `- ${getRemoteEntryPathSegment(entry)}: ${entry.name} (${kindDescription})`;
+    })
+    .join("\n");
+}
+
+function collectRunnableRemoteCommands(
+  entries: RemoteMenuEntry[],
+  prefix: string[] = []
+): Array<{ name: string; path: string }> {
+  const commands: Array<{ name: string; path: string }> = [];
+
+  for (const entry of entries) {
+    const nextPath = [...prefix, getRemoteEntryPathSegment(entry)];
+
+    if (entry.kind === "command") {
+      commands.push({
+        name: entry.name,
+        path: nextPath.join("/")
+      });
+      continue;
+    }
+
+    commands.push(...collectRunnableRemoteCommands(entry.entries, nextPath));
+  }
+
+  return commands;
+}
+
+function getRemoteEntryPathSegment(entry: RemoteMenuEntry): string {
+  const entryPath = entry.relativePath.split("/").at(-1) ?? entry.relativePath;
+  return entry.kind === "command" ? basename(entryPath, extname(entryPath)) : entryPath;
+}
+
 function buildRemoteCommandRunner(
   relativePath: string,
   name: string,
-  confirmation?: string
-): () => Promise<void> {
-  return async () => {
-    const { name: serverName, server } = await resolveServer();
-    if (confirmation) {
-      const confirmed = await promptConfirm(`${confirmation}\nServer: ${serverName}`);
+  confirmation?: string,
+  uploads: RemoteCommandUpload[] = []
+): (serverName?: string) => Promise<void> {
+  return async (serverName?: string) => {
+    const { name: resolvedServerName, server } = await resolveServer(serverName);
+    if (confirmation && shouldPromptForRemoteCommandConfirmation(serverName)) {
+      const confirmed = await promptConfirm(`${confirmation}\nServer: ${resolvedServerName}`);
 
       if (!confirmed) {
         throw new Error(`${name} cancelled.`);
       }
+    }
+
+    for (const upload of uploads) {
+      const resolvedLocalSourcePath = await resolveLocalSourcePath(upload.from);
+      const rsyncArgs = buildUploadRsyncArgs({
+        localSourcePath: resolvedLocalSourcePath,
+        remotePath: upload.to,
+        server
+      });
+
+      await runForegroundCommand("rsync", rsyncArgs, {
+        throwOnNonZero: true
+      });
     }
 
     const script = await readDataText(join("remote", relativePath));
@@ -274,11 +490,11 @@ function buildRemoteCommandRunner(
       env: {
         SITECTL_SERVER_ADDRESS: server.address,
         SITECTL_SERVER_FLAG: server.flag,
-        SITECTL_SERVER_NAME: serverName,
+        SITECTL_SERVER_NAME: resolvedServerName,
         SITECTL_SERVER_PORT: String(server.port),
         SITECTL_SERVER_USER: server.user
       }
     });
-    outro(`${name} completed on "${serverName}".`);
+    outro(`${name} completed on "${resolvedServerName}".`);
   };
 }

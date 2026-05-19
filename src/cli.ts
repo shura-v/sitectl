@@ -1,9 +1,16 @@
-import { cancel, confirm, isCancel, select, text } from "@clack/prompts";
+import { cancel, confirm, isCancel, log, select, text } from "@clack/prompts";
 
 export class PromptCancelledError extends Error {
   constructor() {
     super("Prompt cancelled.");
     this.name = "PromptCancelledError";
+  }
+}
+
+export class FriendlyMessageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FriendlyMessageError";
   }
 }
 
@@ -63,12 +70,21 @@ export function failAndExit(error: unknown): never {
     process.exit(0);
   }
 
+  if (isFriendlyMessageError(error)) {
+    log.warn(error.message);
+    process.exit(1);
+  }
+
   cancel(error instanceof Error ? error.message : "Unknown error.");
   process.exit(1);
 }
 
 export function isPromptCancelledError(error: unknown): error is PromptCancelledError {
   return error instanceof PromptCancelledError;
+}
+
+export function isFriendlyMessageError(error: unknown): error is FriendlyMessageError {
+  return error instanceof FriendlyMessageError;
 }
 
 function unwrapPrompt<T>(value: T | symbol): T {

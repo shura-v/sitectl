@@ -1,11 +1,8 @@
-import { access, glob } from "node:fs/promises";
 import { note, outro } from "@clack/prompts";
 import { promptText } from "../../cli.js";
 import { runForegroundCommand } from "../utils/run-foreground-command.js";
-import {
-  formatServerRsyncDestination,
-  resolveServer
-} from "../utils/server-target.js";
+import { buildRsyncArgs, resolveLocalSourcePath } from "../utils/rsync.js";
+import { resolveServer } from "../utils/server-target.js";
 
 export async function runSyncFilesToServerCommand(): Promise<void> {
   note(
@@ -70,102 +67,4 @@ export async function runSyncFilesToServerCommand(): Promise<void> {
   outro(`Files synced to "${serverName}:${normalizedRemotePath}".`);
 }
 
-export function buildRsyncArgs(options: {
-  localSourcePath: string;
-  remotePath: string;
-  server: Awaited<ReturnType<typeof resolveServer>>["server"];
-}): string[] {
-  const destination = formatServerRsyncDestination(
-    options.server,
-    quoteRemotePathForRsync(options.remotePath)
-  );
-
-  return [
-    "-avz",
-    "-e",
-    `ssh -p ${options.server.port}`,
-    "--",
-    options.localSourcePath,
-    destination
-  ];
-}
-
-export async function resolveLocalSourcePath(localSourcePath: string): Promise<string> {
-  const preserveTrailingSlash = localSourcePath.endsWith("/");
-
-  if (await pathExists(localSourcePath)) {
-    return localSourcePath;
-  }
-
-  if (!isGlobPattern(localSourcePath)) {
-    throw new Error(`Local source path not found: ${localSourcePath}`);
-  }
-
-  const matches: string[] = [];
-  for await (const match of glob(localSourcePath)) {
-    matches.push(match);
-  }
-
-  if (matches.length === 0) {
-    throw new Error(`Local source pattern matched nothing: ${localSourcePath}`);
-  }
-
-  if (matches.length > 1) {
-    throw new Error(
-      `Local source pattern matched multiple paths, but sync supports only one source: ${localSourcePath}`
-    );
-  }
-
-  return preserveTrailingSlash ? `${matches[0]!}/` : matches[0]!;
-}
-
-function quoteRemotePathForRsync(remotePath: string): string {
-  if (remotePath === "~" || remotePath === "/") {
-    return remotePath;
-  }
-
-  let prefix = "";
-  let remainder = remotePath;
-
-  if (remainder.startsWith("~/")) {
-    prefix = "~/";
-    remainder = remainder.slice(2);
-  } else if (remainder.startsWith("/")) {
-    prefix = "/";
-    remainder = remainder.slice(1);
-  }
-
-  const hasTrailingSlash = remainder.endsWith("/");
-  const segments = remainder
-    .split("/")
-    .filter((segment) => segment.length > 0)
-    .map(quoteRemotePathSegment);
-  const quotedPath = `${prefix}${segments.join("/")}`;
-
-  if (!hasTrailingSlash || quotedPath.length === 0) {
-    return quotedPath;
-  }
-
-  return `${quotedPath}/`;
-}
-
-function isGlobPattern(value: string): boolean {
-  return /[*?[]/.test(value);
-}
-
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", "'\\''")}'`;
-}
-
-function quoteRemotePathSegment(segment: string): string {
-  return /^[A-Za-z0-9._-]+$/.test(segment) ? segment : shellQuote(segment);
-}
+export { buildRsyncArgs, resolveLocalSourcePath } from "../utils/rsync.js";
