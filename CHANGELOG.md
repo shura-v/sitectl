@@ -1,5 +1,17 @@
 # sitectl
 
+## 0.2.4
+
+### Patch Changes
+
+- fd0f594: Add `uploads` support for custom `Remote commands`, so a command can upload local files or directories before running its server-side script.
+
+  Add a non-interactive `sitectl run <command> <server_name>` command for running custom remote commands by their file path inside `remote/` against a chosen server.
+
+  Improve rsync path handling for uploads and document the new upload and server sync workflows in the README.
+
+  Bundle `Speedtest` remote commands for installing, running, and uninstalling the Ookla CLI.
+
 ## 0.2.3
 
 ### Patch Changes
