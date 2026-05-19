@@ -10,6 +10,7 @@ export type ServerConfig = {
 };
 
 export type SitectlConfig = {
+  certbotEmail?: string;
   servers: Record<string, ServerConfig>;
 };
 
@@ -44,6 +45,10 @@ export async function readConfig(): Promise<SitectlConfig> {
     );
 
     return {
+      certbotEmail:
+        typeof parsed.certbotEmail === "string" && parsed.certbotEmail.trim().length > 0
+          ? parsed.certbotEmail.trim()
+          : undefined,
       servers
     };
   } catch (error) {

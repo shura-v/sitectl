@@ -28,16 +28,22 @@ if [ ! -d "${HOME}/.oh-my-zsh" ]; then
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
+as_root chsh -s "$(command -v zsh)" "$(id -un)"
+
 cat > "${myzshrc_path}" <<__SITECTL_MYZSHRC__
 alias e="nano"
 alias rcs="source ~/.zshrc"
 alias rce="e ~/.myzshrc && rcs"
 
-setopt prompt_subst
+export PATH="/usr/local/sbin:/usr/sbin:/sbin:\${PATH}"
 
-PROMPT='
+if [ -n "\${ZSH_VERSION:-}" ]; then
+  setopt prompt_subst
+
+  PROMPT='
 %F{green}%~%f %F{196}[%D{%H:%M}]%f
 ${server_flag_escaped} %# '
+fi
 __SITECTL_MYZSHRC__
 
 touch "${zshrc_path}"

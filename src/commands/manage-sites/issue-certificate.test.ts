@@ -10,34 +10,40 @@ describe("buildCertbotIssueCommand", () => {
   it("builds the nginx flow for domain hosts", () => {
     expect(
       buildCertbotIssueCommand({
+        certbotEmail: "ops@example.com",
         hostKind: "domain",
         siteName: "example.com"
       })
-    ).toBe("certbot certonly --nginx -d 'example.com'");
+    ).toBe(
+      "certbot certonly --non-interactive --agree-tos --no-eff-email -m 'ops@example.com' --nginx -d 'example.com'"
+    );
   });
 
   it("builds the webroot short-lived flow for IP hosts", () => {
     expect(
       buildCertbotIssueCommand({
+        certbotEmail: "ops@example.com",
         hostKind: "ipv6",
         siteName: "2a11:3b80:1::dc9"
       })
     ).toBe(
-      "certbot certonly --preferred-profile shortlived --webroot --webroot-path '/var/www/letsencrypt' --deploy-hook 'systemctl reload nginx' --ip-address '2a11:3b80:1::dc9'"
+      "certbot certonly --non-interactive --agree-tos --no-eff-email -m 'ops@example.com' --preferred-profile shortlived --webroot --webroot-path '/var/www/letsencrypt' --deploy-hook 'systemctl reload nginx' --ip-address '2a11:3b80:1::dc9'"
     );
   });
 
   it("uses a custom certbot executable when provided", () => {
     expect(
       buildCertbotIssueCommand({
+        certbotEmail: "ops@example.com",
         certbotExecutable: "/opt/certbot/bin/certbot",
         hostKind: "ipv4",
         siteName: "203.0.113.10"
       })
     ).toBe(
-      "'/opt/certbot/bin/certbot' certonly --preferred-profile shortlived --webroot --webroot-path '/var/www/letsencrypt' --deploy-hook 'systemctl reload nginx' --ip-address '203.0.113.10'"
+      "'/opt/certbot/bin/certbot' certonly --non-interactive --agree-tos --no-eff-email -m 'ops@example.com' --preferred-profile shortlived --webroot --webroot-path '/var/www/letsencrypt' --deploy-hook 'systemctl reload nginx' --ip-address '203.0.113.10'"
     );
   });
+
 });
 
 describe("buildRemotePythonCertbotInstallCommand", () => {
