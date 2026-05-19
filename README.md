@@ -230,8 +230,9 @@ What those actions do:
   Completely removes Docker packages and permanently deletes Docker data, including
   containers, images, networks, and volumes.
 - `Configure zsh`
-  Installs `zsh` and `oh-my-zsh` if needed, then applies the custom shell
-  config bundled inside `~/.config/sitectl/remote/configure-zsh.sh`.
+  Installs `zsh` and `oh-my-zsh` if needed, switches the user's default shell
+  to `zsh`, then applies the custom shell config bundled inside
+  `~/.config/sitectl/remote/configure-zsh.sh`.
 - `Setup ufw`
   Applies the default firewall rules for SSH, HTTP, and HTTPS.
 

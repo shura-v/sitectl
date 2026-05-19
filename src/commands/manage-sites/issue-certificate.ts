@@ -1,5 +1,6 @@
 import { note, outro } from "@clack/prompts";
-import { promptConfirm } from "../../cli.js";
+import { promptConfirm, promptText } from "../../cli.js";
+import { getConfigPath, readConfig, writeConfig } from "../../config.js";
 import { detectHostKind, normalizeHostValue, type HostKind } from "../../hosts.js";
 import { runForegroundCommand } from "../utils/run-foreground-command.js";
 import { formatServerSshTarget } from "../utils/server-target.js";
@@ -25,6 +26,7 @@ export async function runIssueCertificateAction(): Promise<void> {
   const previousTarget = await readRemoteSymlinkTarget(server, targetFileName);
   const bootstrapTarget = `/etc/nginx/sites-available/${siteName}.bootstrap.conf`;
   const existingLineage = await remoteFindCertificateLineage(server, siteName);
+  const certbotEmail = await resolveCertbotEmail();
 
   if (existingLineage) {
     note(
@@ -46,6 +48,7 @@ export async function runIssueCertificateAction(): Promise<void> {
 
   const deployTarget = formatServerSshTarget(server);
   const remoteCommand = await buildRemoteCertificateCommand({
+    certbotEmail,
     hostKind,
     siteName,
     serverName,
@@ -94,23 +97,32 @@ export async function runIssueCertificateAction(): Promise<void> {
 }
 
 export function buildCertbotIssueCommand(options: {
+  certbotEmail: string;
   certbotExecutable?: string;
   hostKind: HostKind;
   siteName: string;
 }): string {
   const normalizedSiteName = normalizeHostValue(options.siteName);
   const quotedSiteName = shellQuote(normalizedSiteName);
+  const quotedEmail = shellQuote(options.certbotEmail);
   const certbotExecutable =
     options.certbotExecutable && options.certbotExecutable !== "certbot"
       ? shellQuote(options.certbotExecutable)
       : "certbot";
+  const baseParts = [
+    `${certbotExecutable} certonly`,
+    "--non-interactive",
+    "--agree-tos",
+    "--no-eff-email",
+    `-m ${quotedEmail}`
+  ];
 
   if (options.hostKind === "domain") {
-    return `${certbotExecutable} certonly --nginx -d ${quotedSiteName}`;
+    return [...baseParts, "--nginx", `-d ${quotedSiteName}`].join(" ");
   }
 
   return [
-    `${certbotExecutable} certonly`,
+    ...baseParts,
     "--preferred-profile shortlived",
     "--webroot",
     `--webroot-path ${shellQuote("/var/www/letsencrypt")}`,
@@ -172,6 +184,7 @@ export function isCertbotVersionAtLeast(version: string, minimum: string): boole
 type IssueCertbotMode = "domain" | "ip";
 
 async function buildRemoteCertificateCommand(options: {
+  certbotEmail: string;
   hostKind: HostKind;
   siteName: string;
   serverName: string;
@@ -233,12 +246,47 @@ async function buildRemoteCertificateCommand(options: {
   const webrootPath = shellQuote("/var/www/letsencrypt");
   const mkdirCommand = options.runAsRoot ? `mkdir -p ${webrootPath}` : `sudo mkdir -p ${webrootPath}`;
   const command = buildCertbotIssueCommand({
+    certbotEmail: options.certbotEmail,
     certbotExecutable,
     hostKind: options.hostKind,
     siteName: options.siteName
   });
 
   return `${mkdirCommand} && ${wrapRemoteCommandForPrivileges(command, options.runAsRoot)}`;
+}
+
+async function resolveCertbotEmail(): Promise<string> {
+  const config = await readConfig();
+
+  if (config.certbotEmail) {
+    return config.certbotEmail;
+  }
+
+  const certbotEmail = await promptText({
+    message: "Email for Let's Encrypt expiry notices",
+    placeholder: "ops@example.com",
+    validate: validateEmail
+  });
+
+  config.certbotEmail = certbotEmail.trim();
+  await writeConfig(config);
+  note(`Saved Certbot email to ${getConfigPath()}.`, "Config updated");
+
+  return config.certbotEmail;
+}
+
+function validateEmail(value: string): string | undefined {
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.length === 0) {
+    return "Email is required.";
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue)) {
+    return "Enter a valid email address.";
+  }
+
+  return undefined;
 }
 
 async function resolveCertbotForIssue(options: {
