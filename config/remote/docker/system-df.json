@@ -1,0 +1,23 @@
+{
+  "name": "Show Docker disk usage",
+  "hidden": false,
+  "order": 16,
+  "prompts": [
+    {
+      "env": "SITECTL_DOCKER_SYSTEM_DF_MODE",
+      "message": "Choose docker system df output mode",
+      "options": [
+        {
+          "label": "Normal",
+          "value": "normal",
+          "hint": "Show the default summary"
+        },
+        {
+          "label": "Verbose (-v)",
+          "value": "verbose",
+          "hint": "Show detailed image and container rows"
+        }
+      ]
+    }
+  ]
+}

@@ -149,12 +149,24 @@ Shape for remote metadata:
   order?: number;
   hidden?: boolean;
   confirmation?: string;
+  prompts?: Array<{
+    env: string;
+    message: string;
+    options: Array<{
+      label: string;
+      value: string;
+      hint?: string;
+    }>;
+  }>;
   uploads?: Array<{
     from: string;
     to: string;
   }>;
 }
 ```
+
+`prompts`, `confirmation`, and `uploads` apply only to runnable command files,
+not submenu metadata for directories.
 
 When `uploads` is present, `sitectl` uploads those local paths before it starts the
 remote script:
@@ -168,6 +180,29 @@ remote script:
 This is useful when a remote command needs a local file first, for example to
 restore backups, replace a database, upload a release artifact, send config
 files, or stage migration data before the server-side script runs.
+
+When `prompts` is present, `sitectl` asks the user to choose from predefined
+options before the remote script starts, then exports the selected values as
+environment variables for the script:
+
+- `env` is the environment variable name that will be exported to the remote script
+- `env` must start with `SITECTL_` and use only uppercase letters, numbers, and underscores
+- `message` is the select prompt shown locally before SSH starts
+- `options` defines the allowed values for that prompt
+- `label` is what the user sees in the menu
+- `value` is what gets exported into the remote environment
+- `hint` is optional helper text shown beside the option
+
+This is useful when one remote command should support a small set of explicit
+modes without duplicating nearly identical scripts.
+
+For direct CLI runs with `sitectl run <command> <server_name>`, prompted values
+must be provided through matching local environment variables instead of an
+interactive select. Example:
+
+```bash
+SITECTL_DOCKER_SYSTEM_DF_MODE=verbose sitectl run docker/system-df my-server
+```
 
 ## Remote Command Example
 
