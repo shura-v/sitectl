@@ -1,5 +1,14 @@
 # sitectl
 
+## 0.3.0
+
+### Minor Changes
+
+- ee87ada: Add bundled Docker remote commands for container stats and disk usage.
+
+  Remote command metadata now supports command-level `prompts`, including
+  interactive menu selection and local env overrides for `sitectl run`.
+
 ## 0.2.4
 
 ### Patch Changes
