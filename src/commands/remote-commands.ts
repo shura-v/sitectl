@@ -22,6 +22,7 @@ export type RemoteCommandEntry = {
   kind: "command";
   name: string;
   order?: number;
+  prompts?: RemoteCommandPrompt[];
   relativePath: string;
   run: (serverName?: string) => Promise<void>;
 };
@@ -39,6 +40,7 @@ type RemoteCommandMetadata = {
   hidden?: boolean;
   name: string;
   order?: number;
+  prompts?: RemoteCommandPrompt[];
   uploads?: RemoteCommandUpload[];
 };
 
@@ -46,6 +48,26 @@ type RemoteCommandUpload = {
   from: string;
   to: string;
 };
+
+type RemoteCommandPrompt = {
+  env: string;
+  message: string;
+  options: RemoteCommandPromptOption[];
+};
+
+type RemoteCommandPromptOption = {
+  hint?: string;
+  label: string;
+  value: string;
+};
+
+const RESERVED_REMOTE_COMMAND_ENV_NAMES = new Set([
+  "SITECTL_SERVER_ADDRESS",
+  "SITECTL_SERVER_FLAG",
+  "SITECTL_SERVER_NAME",
+  "SITECTL_SERVER_PORT",
+  "SITECTL_SERVER_USER"
+]);
 
 export async function runRemoteCommandsFlow(): Promise<void> {
   const entries = await discoverRemoteMenuEntries();
@@ -123,6 +145,12 @@ export async function discoverRemoteMenuEntriesInDirectory(
     }
 
     if (matchingDirectory) {
+      if (metadata.prompts && metadata.prompts.length > 0) {
+        throw new Error(
+          `Remote submenu metadata "${joinRemotePath(relativeDirectoryPath, metadataEntry.name)}" cannot contain "prompts". Prompts are supported only on runnable commands.`
+        );
+      }
+
       discoveredEntries.push({
         kind: "submenu",
         name: metadata.name,
@@ -154,11 +182,13 @@ export async function discoverRemoteMenuEntriesInDirectory(
       confirmation: metadata.confirmation,
       name: metadata.name,
       order: metadata.order,
+      prompts: metadata.prompts,
       relativePath: commandRelativePath,
       run: buildRemoteCommandRunner(
         commandRelativePath,
         metadata.name,
         metadata.confirmation,
+        metadata.prompts,
         metadata.uploads
       )
     });
@@ -186,6 +216,40 @@ export function formatRunnableRemoteCommandList(entries: RemoteMenuEntry[]): str
 
 export function shouldPromptForRemoteCommandConfirmation(serverName?: string): boolean {
   return serverName === undefined;
+}
+
+export function resolveRemoteCommandPromptValue(
+  prompt: RemoteCommandPrompt,
+  serverName?: string
+): Promise<string> | string {
+  if (serverName === undefined) {
+    return promptSelect(
+      prompt.options.map((option) => ({
+        value: option.value,
+        label: option.label,
+        hint: option.hint
+      })),
+      prompt.message
+    );
+  }
+
+  const envValue = process.env[prompt.env];
+
+  if (!envValue) {
+    throw new FriendlyMessageError(
+      `Remote command prompt "${prompt.message}" requires local env ${prompt.env} when using "sitectl run ... ${serverName}".`
+    );
+  }
+
+  const matchesOption = prompt.options.some((option) => option.value === envValue);
+
+  if (!matchesOption) {
+    throw new FriendlyMessageError(
+      `Local env ${prompt.env} must be one of: ${prompt.options.map((option) => option.value).join(", ")}.`
+    );
+  }
+
+  return envValue;
 }
 
 export function buildRemoteCommandResolutionError(
@@ -312,6 +376,92 @@ async function readRemoteCommandMetadata(
     throw new Error(`Remote metadata "${displayPath}" must contain a numeric "order" when provided.`);
   }
 
+  if (parsed.prompts !== undefined) {
+    if (!Array.isArray(parsed.prompts)) {
+      throw new Error(`Remote metadata "${displayPath}" must contain an array "prompts" when provided.`);
+    }
+
+    const seenPromptEnvNames = new Set<string>();
+
+    for (const [promptIndex, prompt] of parsed.prompts.entries()) {
+      const promptNumber = promptIndex + 1;
+
+      if (!prompt || typeof prompt !== "object" || Array.isArray(prompt)) {
+        throw new Error(
+          `Remote metadata "${displayPath}" prompt #${promptNumber} must be an object with non-empty "env", "message", and "options".`
+        );
+      }
+
+      if (typeof prompt.env !== "string" || prompt.env.trim().length === 0) {
+        throw new Error(
+          `Remote metadata "${displayPath}" prompt #${promptNumber} must contain a non-empty "env" string.`
+        );
+      }
+
+      const envName = prompt.env.trim();
+
+      if (!/^SITECTL_[A-Z0-9_]+$/.test(envName)) {
+        throw new Error(
+          `Remote metadata "${displayPath}" prompt #${promptNumber} env must start with "SITECTL_" and contain only uppercase letters, numbers, and underscores.`
+        );
+      }
+
+      if (RESERVED_REMOTE_COMMAND_ENV_NAMES.has(envName)) {
+        throw new Error(
+          `Remote metadata "${displayPath}" prompt #${promptNumber} env "${envName}" is reserved for built-in server values.`
+        );
+      }
+
+      if (seenPromptEnvNames.has(envName)) {
+        throw new Error(
+          `Remote metadata "${displayPath}" prompt #${promptNumber} env "${envName}" duplicates an earlier prompt env.`
+        );
+      }
+
+      seenPromptEnvNames.add(envName);
+
+      if (typeof prompt.message !== "string" || prompt.message.trim().length === 0) {
+        throw new Error(
+          `Remote metadata "${displayPath}" prompt #${promptNumber} must contain a non-empty "message" string.`
+        );
+      }
+
+      if (!Array.isArray(prompt.options) || prompt.options.length === 0) {
+        throw new Error(
+          `Remote metadata "${displayPath}" prompt #${promptNumber} must contain a non-empty "options" array.`
+        );
+      }
+
+      for (const [optionIndex, option] of prompt.options.entries()) {
+        const optionNumber = optionIndex + 1;
+
+        if (!option || typeof option !== "object" || Array.isArray(option)) {
+          throw new Error(
+            `Remote metadata "${displayPath}" prompt #${promptNumber} option #${optionNumber} must be an object with non-empty "label" and "value" strings.`
+          );
+        }
+
+        if (typeof option.label !== "string" || option.label.trim().length === 0) {
+          throw new Error(
+            `Remote metadata "${displayPath}" prompt #${promptNumber} option #${optionNumber} must contain a non-empty "label" string.`
+          );
+        }
+
+        if (typeof option.value !== "string" || option.value.trim().length === 0) {
+          throw new Error(
+            `Remote metadata "${displayPath}" prompt #${promptNumber} option #${optionNumber} must contain a non-empty "value" string.`
+          );
+        }
+
+        if (option.hint !== undefined && typeof option.hint !== "string") {
+          throw new Error(
+            `Remote metadata "${displayPath}" prompt #${promptNumber} option #${optionNumber} must contain a string "hint" when provided.`
+          );
+        }
+      }
+    }
+  }
+
   if (parsed.uploads !== undefined) {
     if (!Array.isArray(parsed.uploads)) {
       throw new Error(`Remote metadata "${displayPath}" must contain an array "uploads" when provided.`);
@@ -343,6 +493,15 @@ async function readRemoteCommandMetadata(
     hidden: parsed.hidden ?? false,
     name: parsed.name.trim(),
     order: parsed.order,
+    prompts: parsed.prompts?.map((prompt) => ({
+      env: prompt.env.trim(),
+      message: prompt.message.trim(),
+      options: prompt.options.map((option) => ({
+        hint: option.hint?.trim() || undefined,
+        label: option.label.trim(),
+        value: option.value.trim()
+      }))
+    })),
     uploads: parsed.uploads?.map((upload) => ({
       from: upload.from.trim(),
       to: upload.to.trim()
@@ -460,6 +619,7 @@ function buildRemoteCommandRunner(
   relativePath: string,
   name: string,
   confirmation?: string,
+  prompts: RemoteCommandPrompt[] = [],
   uploads: RemoteCommandUpload[] = []
 ): (serverName?: string) => Promise<void> {
   return async (serverName?: string) => {
@@ -470,6 +630,12 @@ function buildRemoteCommandRunner(
       if (!confirmed) {
         throw new Error(`${name} cancelled.`);
       }
+    }
+
+    const promptEnv: Record<string, string> = {};
+
+    for (const prompt of prompts) {
+      promptEnv[prompt.env] = await resolveRemoteCommandPromptValue(prompt, serverName);
     }
 
     for (const upload of uploads) {
@@ -488,6 +654,7 @@ function buildRemoteCommandRunner(
     const script = await readDataText(join("remote", relativePath));
     await runRemoteScript(server, script, {
       env: {
+        ...promptEnv,
         SITECTL_SERVER_ADDRESS: server.address,
         SITECTL_SERVER_FLAG: server.flag,
         SITECTL_SERVER_NAME: resolvedServerName,
