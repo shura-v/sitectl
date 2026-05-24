@@ -4,7 +4,7 @@
   "order": 16,
   "prompts": [
     {
-      "env": "SITECTL_DOCKER_SYSTEM_DF_MODE",
+      "env": "SITECTL_ENV_DOCKER_SYSTEM_DF_MODE",
       "message": "Choose docker system df output mode",
       "options": [
         {

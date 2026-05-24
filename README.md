@@ -186,7 +186,7 @@ options before the remote script starts, then exports the selected values as
 environment variables for the script:
 
 - `env` is the environment variable name that will be exported to the remote script
-- `env` must start with `SITECTL_` and use only uppercase letters, numbers, and underscores
+- `env` must start with `SITECTL_ENV_` and use only uppercase letters, numbers, and underscores
 - `message` is the select prompt shown locally before SSH starts
 - `options` defines the allowed values for that prompt
 - `label` is what the user sees in the menu
@@ -201,8 +201,13 @@ must be provided through matching local environment variables instead of an
 interactive select. Example:
 
 ```bash
-SITECTL_DOCKER_SYSTEM_DF_MODE=verbose sitectl run docker/system-df my-server
+SITECTL_ENV_DOCKER_SYSTEM_DF_MODE=verbose sitectl run docker/system-df my-server
 ```
+
+Additionally, `sitectl run ...` forwards all local environment variables whose
+names match `SITECTL_ENV_[A-Z0-9_]+` into the remote script. The
+`SITECTL_SERVER_*` namespace is reserved for built-in server values that
+`sitectl` manages itself.
 
 ## Remote Command Example
 
