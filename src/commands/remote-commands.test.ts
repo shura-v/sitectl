@@ -107,6 +107,44 @@ describe("discoverRemoteMenuEntriesInDirectory", () => {
     );
   });
 
+  it("throws when env is not an object", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "danger.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(join(root, "danger.json"), JSON.stringify({ name: "Danger", env: true }));
+
+    await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
+      'Remote metadata "danger.json" must contain an object "env" when provided.'
+    );
+  });
+
+  it("accepts command env metadata", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "deploy.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "deploy.json"),
+      JSON.stringify({
+        name: "Deploy",
+        env: {
+          RELEASE_CHANNEL: "stable",
+          SITECTL_ENV_RELEASE_TAG: "v1.2.3"
+        }
+      })
+    );
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      kind: "command",
+      name: "Deploy",
+      relativePath: "deploy.sh",
+      env: {
+        RELEASE_CHANNEL: "stable",
+        SITECTL_ENV_RELEASE_TAG: "v1.2.3"
+      }
+    });
+  });
+
   it("throws when prompts is not an array", async () => {
     const root = await createTempDirectory();
     await writeFile(join(root, "danger.sh"), "#!/usr/bin/env bash\n");
@@ -161,6 +199,60 @@ describe("discoverRemoteMenuEntriesInDirectory", () => {
     });
   });
 
+  it("accepts text prompts metadata on a command", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "deploy.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "deploy.json"),
+      JSON.stringify({
+        name: "Deploy",
+        prompts: [
+          {
+            env: "SITECTL_ENV_RELEASE_TAG",
+            message: "Enter release tag"
+          }
+        ]
+      })
+    );
+
+    const entries = await discoverRemoteMenuEntriesInDirectory(root, "");
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      kind: "command",
+      name: "Deploy",
+      relativePath: "deploy.sh",
+      prompts: [
+        {
+          env: "SITECTL_ENV_RELEASE_TAG",
+          message: "Enter release tag"
+        }
+      ]
+    });
+  });
+
+  it("throws when prompt options is empty", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "disk.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "disk.json"),
+      JSON.stringify({
+        name: "Disk usage",
+        prompts: [
+          {
+            env: "SITECTL_ENV_DOCKER_SYSTEM_DF_MODE",
+            message: "Select output mode",
+            options: []
+          }
+        ]
+      })
+    );
+
+    await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
+      'Remote metadata "disk.json" prompt #1 must contain a non-empty "options" array when provided.'
+    );
+  });
+
   it("throws when submenu metadata contains prompts", async () => {
     const root = await createTempDirectory();
     await mkdir(join(root, "docker"));
@@ -180,6 +272,24 @@ describe("discoverRemoteMenuEntriesInDirectory", () => {
 
     await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
       'Remote submenu metadata "docker.json" cannot contain "prompts". Prompts are supported only on runnable commands.'
+    );
+  });
+
+  it("throws when submenu metadata contains env", async () => {
+    const root = await createTempDirectory();
+    await mkdir(join(root, "docker"));
+    await writeFile(
+      join(root, "docker.json"),
+      JSON.stringify({
+        name: "Docker",
+        env: {
+          SITECTL_ENV_DOCKER_MODE: "verbose"
+        }
+      })
+    );
+
+    await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
+      'Remote submenu metadata "docker.json" cannot contain "env". Env values are supported only on runnable commands.'
     );
   });
 
@@ -229,6 +339,42 @@ describe("discoverRemoteMenuEntriesInDirectory", () => {
 
     await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
       'Remote metadata "disk.json" prompt #2 env "SITECTL_ENV_DOCKER_MODE" duplicates an earlier prompt env.'
+    );
+  });
+
+  it("rejects reserved metadata env names", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "deploy.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "deploy.json"),
+      JSON.stringify({
+        name: "Deploy",
+        env: {
+          SITECTL_SERVER_NAME: "override"
+        }
+      })
+    );
+
+    await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
+      'Remote metadata "deploy.json" env "SITECTL_SERVER_NAME" is reserved by sitectl.'
+    );
+  });
+
+  it("rejects invalid metadata env names", async () => {
+    const root = await createTempDirectory();
+    await writeFile(join(root, "deploy.sh"), "#!/usr/bin/env bash\n");
+    await writeFile(
+      join(root, "deploy.json"),
+      JSON.stringify({
+        name: "Deploy",
+        env: {
+          "release-tag": "v1.2.3"
+        }
+      })
+    );
+
+    await expect(discoverRemoteMenuEntriesInDirectory(root, "")).rejects.toThrow(
+      'Remote metadata "deploy.json" env "release-tag" must use a valid shell variable name.'
     );
   });
 
@@ -373,7 +519,7 @@ describe("shouldPromptForRemoteCommandConfirmation", () => {
 });
 
 describe("resolveRemoteCommandPromptValue", () => {
-  const prompt = {
+  const selectPrompt = {
     env: "SITECTL_ENV_DOCKER_SYSTEM_DF_MODE",
     message: "Select output mode",
     options: [
@@ -381,28 +527,63 @@ describe("resolveRemoteCommandPromptValue", () => {
       { label: "Verbose", value: "verbose", hint: "Includes per-image and per-container rows" }
     ]
   };
+  const textPrompt = {
+    env: "SITECTL_ENV_RELEASE_TAG",
+    message: "Enter release tag"
+  };
 
   const originalEnvValue = process.env.SITECTL_ENV_DOCKER_SYSTEM_DF_MODE;
+  const originalReleaseTag = process.env.SITECTL_ENV_RELEASE_TAG;
 
   afterEach(() => {
     if (originalEnvValue === undefined) {
       delete process.env.SITECTL_ENV_DOCKER_SYSTEM_DF_MODE;
+    } else {
+      process.env.SITECTL_ENV_DOCKER_SYSTEM_DF_MODE = originalEnvValue;
+    }
+
+    if (originalReleaseTag === undefined) {
+      delete process.env.SITECTL_ENV_RELEASE_TAG;
       return;
     }
 
-    process.env.SITECTL_ENV_DOCKER_SYSTEM_DF_MODE = originalEnvValue;
+    process.env.SITECTL_ENV_RELEASE_TAG = originalReleaseTag;
   });
 
   it("reads prompt values from the local environment for cli runs", () => {
     process.env.SITECTL_ENV_DOCKER_SYSTEM_DF_MODE = "verbose";
 
-    expect(resolveRemoteCommandPromptValue(prompt, "my-server")).toBe("verbose");
+    expect(resolveRemoteCommandPromptValue(selectPrompt, "my-server")).toBe("verbose");
+  });
+
+  it("reads text prompt values from the local environment for cli runs", () => {
+    process.env.SITECTL_ENV_RELEASE_TAG = "v1.2.3";
+
+    expect(resolveRemoteCommandPromptValue(textPrompt, "my-server")).toBe("v1.2.3");
+  });
+
+  it("uses metadata env values as cli defaults", () => {
+    expect(
+      resolveRemoteCommandPromptValue(textPrompt, "my-server", {
+        SITECTL_ENV_RELEASE_TAG: "from-metadata"
+      })
+    ).toBe("from-metadata");
+  });
+
+  it("lets explicit cli env override metadata defaults", () => {
+    process.env.SITECTL_ENV_RELEASE_TAG = "from-local-env";
+
+    expect(
+      resolveRemoteCommandPromptValue(textPrompt, "my-server", {
+        SITECTL_ENV_RELEASE_TAG: "from-local-env"
+      })
+    ).toBe("from-local-env");
   });
 
   it("throws when the local environment variable is missing for cli runs", () => {
     delete process.env.SITECTL_ENV_DOCKER_SYSTEM_DF_MODE;
 
-    expect(() => resolveRemoteCommandPromptValue(prompt, "my-server")).toThrow(
+    expect(() => resolveRemoteCommandPromptValue(selectPrompt, "my-server")).toThrow(
       'Remote command prompt "Select output mode" requires local env SITECTL_ENV_DOCKER_SYSTEM_DF_MODE when using "sitectl run ... my-server".'
     );
   });
@@ -410,7 +591,7 @@ describe("resolveRemoteCommandPromptValue", () => {
   it("throws when the local environment variable has an unsupported value", () => {
     process.env.SITECTL_ENV_DOCKER_SYSTEM_DF_MODE = "full";
 
-    expect(() => resolveRemoteCommandPromptValue(prompt, "my-server")).toThrow(
+    expect(() => resolveRemoteCommandPromptValue(selectPrompt, "my-server")).toThrow(
       "Local env SITECTL_ENV_DOCKER_SYSTEM_DF_MODE must be one of: normal, verbose."
     );
   });
