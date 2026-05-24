@@ -19,7 +19,7 @@ if ! as_root docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-mode="${SITECTL_DOCKER_SYSTEM_DF_MODE:-normal}"
+mode="${SITECTL_ENV_DOCKER_SYSTEM_DF_MODE:-normal}"
 
 if [ "${mode}" = "verbose" ]; then
   as_root docker system df -v

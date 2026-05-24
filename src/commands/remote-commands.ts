@@ -69,6 +69,27 @@ const RESERVED_REMOTE_COMMAND_ENV_NAMES = new Set([
   "SITECTL_SERVER_USER"
 ]);
 
+const CUSTOM_REMOTE_COMMAND_ENV_NAME_PATTERN = /^SITECTL_ENV_[A-Z0-9_]+$/;
+export function collectForwardedLocalRemoteEnv(
+  env: NodeJS.ProcessEnv = process.env
+): Record<string, string> {
+  const forwardedEnv: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(env)) {
+    if (!CUSTOM_REMOTE_COMMAND_ENV_NAME_PATTERN.test(key)) {
+      continue;
+    }
+
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    forwardedEnv[key] = value;
+  }
+
+  return forwardedEnv;
+}
+
 export async function runRemoteCommandsFlow(): Promise<void> {
   const entries = await discoverRemoteMenuEntries();
   await runRemoteMenuFlow({
@@ -400,15 +421,9 @@ async function readRemoteCommandMetadata(
 
       const envName = prompt.env.trim();
 
-      if (!/^SITECTL_[A-Z0-9_]+$/.test(envName)) {
+      if (!CUSTOM_REMOTE_COMMAND_ENV_NAME_PATTERN.test(envName)) {
         throw new Error(
-          `Remote metadata "${displayPath}" prompt #${promptNumber} env must start with "SITECTL_" and contain only uppercase letters, numbers, and underscores.`
-        );
-      }
-
-      if (RESERVED_REMOTE_COMMAND_ENV_NAMES.has(envName)) {
-        throw new Error(
-          `Remote metadata "${displayPath}" prompt #${promptNumber} env "${envName}" is reserved for built-in server values.`
+          `Remote metadata "${displayPath}" prompt #${promptNumber} env must start with "SITECTL_ENV_" and contain only uppercase letters, numbers, and underscores.`
         );
       }
 
@@ -654,6 +669,7 @@ function buildRemoteCommandRunner(
     const script = await readDataText(join("remote", relativePath));
     await runRemoteScript(server, script, {
       env: {
+        ...collectForwardedLocalRemoteEnv(),
         ...promptEnv,
         SITECTL_SERVER_ADDRESS: server.address,
         SITECTL_SERVER_FLAG: server.flag,
