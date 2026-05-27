@@ -11,25 +11,35 @@ as_root() {
   fi
 }
 
+installed_packages="$(
+  for pkg in \
+    docker-ce \
+    docker-ce-cli \
+    docker-ce-rootless-extras \
+    docker-buildx-plugin \
+    docker-compose-plugin \
+    docker.io \
+    docker-compose \
+    docker-compose-v2 \
+    docker-doc \
+    podman-docker \
+    containerd \
+    containerd.io \
+    runc; do
+    if dpkg -s "$pkg" >/dev/null 2>&1; then
+      printf '%s\n' "$pkg"
+    fi
+  done
+)"
+
 as_root systemctl stop docker.service docker.socket containerd.service 2>/dev/null || true
 
-as_root apt purge -y \
-  docker-ce \
-  docker-ce-cli \
-  docker-ce-rootless-extras \
-  docker-buildx-plugin \
-  docker-compose-plugin \
-  docker.io \
-  docker-compose \
-  docker-compose-v2 \
-  docker-doc \
-  podman-docker \
-  containerd \
-  containerd.io \
-  runc \
-  || true
+if [ -n "${installed_packages}" ]; then
+  # Purge only installed packages so missing virtual names do not abort the uninstall.
+  as_root apt-get purge -y ${installed_packages}
+fi
 
-as_root apt autoremove -y || true
+as_root apt-get autoremove -y
 
 as_root rm -rf /var/lib/docker
 as_root rm -rf /var/lib/containerd
