@@ -10,7 +10,7 @@ certificates.
 It is primarily intended for admin-style management of personal or small-scale
 VPS/VDS hosts.
 
-![Interactive sitectl workflow](docs/usage.gif)
+![Interactive sitectl workflow](https://raw.githubusercontent.com/shura-v/sitectl/main/docs/usage.gif)
 
 ## Install
 
