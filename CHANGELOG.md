@@ -1,5 +1,11 @@
 # sitectl
 
+## 0.3.3
+
+### Patch Changes
+
+- 81f1c95: Fix Docker uninstall so it purges only installed packages and reports package removal failures instead of masking them as success.
+
 ## 0.3.2
 
 ### Patch Changes
