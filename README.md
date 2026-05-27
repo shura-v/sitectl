@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/shura-v/sitectl/actions/workflows/ci.yml/badge.svg)](https://github.com/shura-v/sitectl/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/sitectl.svg)](https://www.npmjs.com/package/sitectl)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/shura-v/sitectl/main/LICENSE)
 
 A simple CLI for bootstrapping Linux servers, nginx site configs, and TLS
 certificates.
