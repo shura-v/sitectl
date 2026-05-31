@@ -3,11 +3,13 @@ import { runAddSiteAction } from "./add-site.js";
 import { runCopyConfFilesToServerAction } from "./copy-conf-files-to-server.js";
 import { runDisableHttpsAction } from "./disable-https.js";
 import { runEnableHttpsAction } from "./enable-https.js";
+import { runInstallNginxStackAction } from "./install-nginx-stack.js";
 import { runIssueCertificateAction } from "./issue-certificate.js";
 import { runOpenNginxConfAction } from "./open-nginx-conf.js";
 import { runRemoveSiteFromServerAction } from "./remove-site-from-server.js";
 
 type ManageSitesAction =
+  | "install-nginx-stack"
   | "add-site"
   | "open-nginx-conf"
   | "copy-conf-files-to-server"
@@ -24,6 +26,11 @@ export async function runManageSitesCommand(): Promise<void> {
     try {
       action = await promptSelect(
         [
+          {
+            value: "install-nginx-stack",
+            label: "Install nginx stack",
+            hint: "Install nginx, certbot, and the certbot nginx plugin on a server"
+          },
           {
             value: "add-site",
             label: "Add site",
@@ -65,7 +72,7 @@ export async function runManageSitesCommand(): Promise<void> {
             hint: "Return to the main menu"
           }
         ],
-        "Manage sites"
+        "Manage nginx"
       );
     } catch (error) {
       if (isPromptCancelledError(error)) {
@@ -81,6 +88,9 @@ export async function runManageSitesCommand(): Promise<void> {
 
     try {
       switch (action) {
+        case "install-nginx-stack":
+          await runInstallNginxStackAction();
+          break;
         case "add-site":
           await runAddSiteAction();
           break;

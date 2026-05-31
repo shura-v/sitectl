@@ -106,7 +106,8 @@ async function seedBundledDirectory(
       relativePath === "nginx/http.conf" ||
       relativePath === "nginx/https.conf" ||
       relativePath === "nginx/acme-challenge.conf" ||
-      relativePath === "nginx/ssl-managed.conf"
+      relativePath === "nginx/ssl-managed.conf" ||
+      relativePath === "nginx/install-stack.sh"
     ) {
       continue;
     }

@@ -30,8 +30,8 @@ const commandDefinitions: CommandDefinition[] = [
   },
   {
     id: "manage-sites",
-    label: "Manage sites",
-    hint: "Add sites and copy bootstrap/http + https nginx configs",
+    label: "Manage nginx",
+    hint: "Install nginx stack and manage bootstrap/http + https nginx configs",
     run: runManageSitesCommand
   },
   {

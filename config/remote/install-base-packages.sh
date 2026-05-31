@@ -15,15 +15,11 @@ as_root apt update
 as_root apt upgrade -y
 
 # Required for sitectl core workflows:
-# - nginx site deployment
-# - certificate issuance via certbot
 # - firewall setup via ufw
 # - remote script execution and file sync
+# - general server administration helpers
 as_root apt install \
   sudo \
-  nginx \
-  certbot \
-  python3-certbot-nginx \
   curl \
   ca-certificates \
   rsync \
