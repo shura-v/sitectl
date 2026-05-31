@@ -1,5 +1,6 @@
 import { outro } from "@clack/prompts";
 import { getDataPath, seedBundledDataFiles } from "../assets.js";
+import { initializeCaddySiteTemplateFile } from "../caddy.js";
 import { ensureConfigFile } from "../config.js";
 import { initializeSiteTemplateFile } from "../sites.js";
 
@@ -7,6 +8,7 @@ export async function runInitCommand(options: {
   overwrite: boolean;
 }): Promise<void> {
   await seedBundledDataFiles({ overwrite: options.overwrite });
+  await initializeCaddySiteTemplateFile({ overwrite: options.overwrite });
   await initializeSiteTemplateFile({ overwrite: options.overwrite });
   await ensureConfigFile();
 

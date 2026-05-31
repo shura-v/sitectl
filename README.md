@@ -4,7 +4,7 @@
 [![npm version](https://img.shields.io/npm/v/sitectl.svg)](https://www.npmjs.com/package/sitectl)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/shura-v/sitectl/main/LICENSE)
 
-A simple CLI for bootstrapping Linux servers, managing nginx configs, and TLS
+A simple CLI for bootstrapping Linux servers, managing Caddy and nginx configs, and TLS
 certificates.
 
 It is primarily intended for admin-style management of personal or small-scale
@@ -20,15 +20,17 @@ sitectl init
 ```
 
 Use `sitectl init --overwrite-bundled` to refresh bundled templates without replacing
-user-managed data such as `config.json` or per-site nginx configs.
+user-managed data such as `config.json` or per-site Caddy/nginx configs.
 
 ## What It Does
 
-There are three main areas in `sitectl`:
+There are four main areas in `sitectl`:
 
 - `Manage servers`
   Keeps a local registry of servers, gives you quick `ssh` / `ssh-copy-id` flows,
   and lets you sync local files to a selected server over `rsync`.
+- `Manage caddy`
+  Manages domain-first Caddy site configs and remote Caddy deployment.
 - `Manage nginx`
   Manages nginx site configs, certificate issuance, and HTTP/HTTPS switching.
 - `Remote commands`
@@ -40,6 +42,8 @@ With `sitectl`, you can:
 - connect to servers over SSH, install your public key, and sync local files
 - run built-in remote commands on servers
 - add your own **custom remote commands and submenus**
+- install Caddy on a server
+- manage Caddy site configs
 - install an nginx + certbot stack on a server
 - manage nginx site configs
 - issue TLS certificates
@@ -48,8 +52,8 @@ With `sitectl`, you can:
 
 It is opinionated, but customizable:
 - today it is biased toward Debian-like servers because the bootstrap/install
-  flows are written for `apt`, `ufw`, and related packages, with a dedicated
-  `nginx` management flow for web-server setup
+  flows are written for `apt`, `ufw`, and related packages, with dedicated
+  `Caddy` and `nginx` management flows for web-server setup
 - after `sitectl init`, you can adapt the user-managed files in
   `~/.config/sitectl/` to your own setup
 - the main nginx customization point is
@@ -95,7 +99,8 @@ Required local dependencies:
 
 Platform notes:
 
-- On macOS, `Manage nginx -> Copy conf files to server` expects a newer `rsync`
+- On macOS, `Manage caddy -> Copy conf files to server` and
+  `Manage nginx -> Copy conf files to server` expect a newer `rsync`
   than the system one. Install it with Homebrew:
 
 ```bash
@@ -290,8 +295,15 @@ place, restarts services, or performs any other server-side steps it needs.
   - `Sync files to server`
   - `SSH copy id`
   - `SSH`
+- `Manage caddy`
+  - `Install Caddy`
+  - `Add site`
+  - `Open Caddyfile`
+  - `Copy conf files to server`
+  - `Remove site from server`
 - `Manage nginx`
   - `Install nginx stack`
+  - `Uninstall nginx stack`
   - `Add site`
   - `Open nginx.conf`
   - `Copy conf files to server`
@@ -344,7 +356,8 @@ Typical flow for a new VPS:
 4. `Remote commands -> Docker -> Install Docker` if needed
 5. `Remote commands -> Configure zsh`
 6. `Remote commands -> Setup ufw`
-7. `Manage nginx -> Install nginx stack` if this server will host nginx-managed sites
+7. `Manage caddy -> Install Caddy` if this server will host Caddy-managed domains
+8. `Manage nginx -> Install nginx stack` if this server will host nginx-managed sites
 
 What those actions do:
 
@@ -373,6 +386,33 @@ What those actions do:
 - `Setup ufw`
   Applies the default firewall rules for SSH, HTTP, and HTTPS.
 
+## Manage Caddy Workflow
+
+Typical flow for a new Caddy-managed site:
+
+1. `Install Caddy`
+2. `Add site`
+3. edit `Caddyfile`
+4. `Copy conf files to server`
+
+What those actions do:
+
+- `Install Caddy`
+  Installs the official Caddy Debian/Ubuntu package on the selected server and
+  ensures the `caddy` service is enabled and started.
+- `Add site`
+  Creates `~/.config/sitectl/caddy/sites/<host>/` and seeds `Caddyfile`
+  from `~/.config/sitectl/caddy/sites/Caddyfile`.
+- `Open Caddyfile`
+  Opens the local site config for editing.
+- `Copy conf files to server`
+  Uploads the site Caddyfile to `/etc/caddy/sitectl/<host>.caddyfile`, ensures
+  the main `/etc/caddy/Caddyfile` imports `sitectl`-managed site files, then
+  validates and reloads `caddy`.
+- `Remove site from server`
+  Deletes the remote Caddy site config and reloads `caddy`, while keeping the
+  local config in `~/.config/sitectl/caddy/sites/<host>/`.
+
 ## Manage Nginx Workflow
 
 Typical flow for a new nginx-managed site:
@@ -389,6 +429,9 @@ What those actions do:
 - `Install nginx stack`
   Installs `nginx`, `certbot`, and `python3-certbot-nginx` on the selected
   server and ensures the `nginx` service is enabled and started.
+- `Uninstall nginx stack`
+  Removes `nginx`, `certbot`, nginx configs, Let's Encrypt data, and the
+  isolated `/opt/certbot` install from the selected server.
 - `Add site`
   Creates `~/.config/sitectl/nginx/sites/<host>/` and seeds `nginx.conf`
   from `~/.config/sitectl/nginx/sites/nginx-template.conf`.

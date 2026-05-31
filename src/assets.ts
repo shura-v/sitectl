@@ -103,11 +103,14 @@ async function seedBundledDirectory(
     const relativePath = relative(sourceRootDirectoryPath, fileURLToPath(sourceEntryUrl));
 
     if (
+      relativePath === "caddy/install-caddy.sh" ||
+      relativePath === "caddy/sites/Caddyfile" ||
       relativePath === "nginx/http.conf" ||
       relativePath === "nginx/https.conf" ||
+      relativePath === "nginx/install-stack.sh" ||
+      relativePath === "nginx/uninstall-stack.sh" ||
       relativePath === "nginx/acme-challenge.conf" ||
-      relativePath === "nginx/ssl-managed.conf" ||
-      relativePath === "nginx/install-stack.sh"
+      relativePath === "nginx/ssl-managed.conf"
     ) {
       continue;
     }

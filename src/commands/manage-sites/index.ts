@@ -7,9 +7,11 @@ import { runInstallNginxStackAction } from "./install-nginx-stack.js";
 import { runIssueCertificateAction } from "./issue-certificate.js";
 import { runOpenNginxConfAction } from "./open-nginx-conf.js";
 import { runRemoveSiteFromServerAction } from "./remove-site-from-server.js";
+import { runUninstallNginxStackAction } from "./uninstall-nginx-stack.js";
 
 type ManageSitesAction =
   | "install-nginx-stack"
+  | "uninstall-nginx-stack"
   | "add-site"
   | "open-nginx-conf"
   | "copy-conf-files-to-server"
@@ -30,6 +32,11 @@ export async function runManageSitesCommand(): Promise<void> {
             value: "install-nginx-stack",
             label: "Install nginx stack",
             hint: "Install nginx, certbot, and the certbot nginx plugin on a server"
+          },
+          {
+            value: "uninstall-nginx-stack",
+            label: "Uninstall nginx stack",
+            hint: "Remove nginx, certbot, configs, and certificates from a server"
           },
           {
             value: "add-site",
@@ -90,6 +97,9 @@ export async function runManageSitesCommand(): Promise<void> {
       switch (action) {
         case "install-nginx-stack":
           await runInstallNginxStackAction();
+          break;
+        case "uninstall-nginx-stack":
+          await runUninstallNginxStackAction();
           break;
         case "add-site":
           await runAddSiteAction();

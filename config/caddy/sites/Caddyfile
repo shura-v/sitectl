@@ -1,0 +1,3 @@
+__SITE_NAME__ {
+    respond "Service is running." 200
+}
