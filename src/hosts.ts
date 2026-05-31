@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { domainToASCII } from "node:url";
 
 export type HostKind = "domain" | "ipv4" | "ipv6";
 
@@ -36,4 +37,15 @@ export function isIpHost(value: string): boolean {
 export function formatNginxServerName(value: string): string {
   const normalizedValue = normalizeHostValue(value);
   return detectHostKind(normalizedValue) === "ipv6" ? `[${normalizedValue}]` : normalizedValue;
+}
+
+export function canonicalizeDomainHostname(value: string): string {
+  const normalizedValue = normalizeHostValue(value);
+
+  if (detectHostKind(normalizedValue) !== "domain") {
+    return normalizedValue;
+  }
+
+  const asciiValue = domainToASCII(normalizedValue);
+  return asciiValue.length > 0 ? asciiValue.toLowerCase() : normalizedValue.toLowerCase();
 }

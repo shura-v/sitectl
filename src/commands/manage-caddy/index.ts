@@ -4,6 +4,7 @@ import { runCopyCaddyConfFilesToServerAction } from "./copy-conf-files-to-server
 import { runInstallCaddyAction } from "./install-caddy.js";
 import { runOpenCaddyfileAction } from "./open-caddyfile.js";
 import { runRemoveCaddySiteFromServerAction } from "./remove-site-from-server.js";
+import { runShowCaddyCertPathsAction } from "./show-cert-paths.js";
 import { runUninstallCaddyAction } from "./uninstall-caddy.js";
 
 type ManageCaddyAction =
@@ -12,6 +13,7 @@ type ManageCaddyAction =
   | "add-site"
   | "open-caddyfile"
   | "copy-conf-files-to-server"
+  | "list-cert-paths"
   | "remove-site-from-server"
   | "back";
 
@@ -46,6 +48,11 @@ export async function runManageCaddyCommand(): Promise<void> {
             value: "copy-conf-files-to-server",
             label: "Copy conf files to server",
             hint: "Upload a site Caddyfile and reload Caddy"
+          },
+          {
+            value: "list-cert-paths",
+            label: "List cert paths",
+            hint: "List all remote .crt and .key paths in Caddy storage"
           },
           {
             value: "remove-site-from-server",
@@ -88,6 +95,9 @@ export async function runManageCaddyCommand(): Promise<void> {
           break;
         case "copy-conf-files-to-server":
           await runCopyCaddyConfFilesToServerAction();
+          break;
+        case "list-cert-paths":
+          await runShowCaddyCertPathsAction();
           break;
         case "remove-site-from-server":
           await runRemoveCaddySiteFromServerAction();
