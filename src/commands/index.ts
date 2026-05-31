@@ -1,6 +1,7 @@
 import { cancel, outro } from "@clack/prompts";
 import type { SelectOption } from "../cli.js";
 import { isPromptCancelledError, promptSelect } from "../cli.js";
+import { runManageCaddyCommand } from "./manage-caddy/index.js";
 import { getConfigPath } from "../config.js";
 import { runManageServersFlow } from "./manage-servers/index.js";
 import { runRemoteCommandsFlow } from "./remote-commands.js";
@@ -9,6 +10,7 @@ import { runOpenDataDirCommand } from "./open-data-dir.js";
 
 type CommandId =
   | "manage-servers"
+  | "manage-caddy"
   | "remote-commands"
   | "open-data-dir"
   | "manage-sites"
@@ -29,9 +31,15 @@ const commandDefinitions: CommandDefinition[] = [
     run: runManageServersFlow
   },
   {
+    id: "manage-caddy",
+    label: "Manage caddy",
+    hint: "Install Caddy and manage domain-first Caddy site configs",
+    run: runManageCaddyCommand
+  },
+  {
     id: "manage-sites",
-    label: "Manage sites",
-    hint: "Add sites and copy bootstrap/http + https nginx configs",
+    label: "Manage nginx",
+    hint: "Install nginx stack and manage bootstrap/http + https nginx configs",
     run: runManageSitesCommand
   },
   {

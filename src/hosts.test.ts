@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { detectHostKind, formatNginxServerName, normalizeHostValue } from "./hosts.js";
+import {
+  canonicalizeDomainHostname,
+  detectHostKind,
+  formatNginxServerName,
+  normalizeHostValue
+} from "./hosts.js";
 import { joinTemplateSections, renderSiteTemplate } from "./sites.js";
 import {
   formatRsyncHost,
@@ -49,6 +54,20 @@ describe("formatNginxServerName", () => {
 
   it("avoids double-bracketing IPv6 addresses", () => {
     expect(formatNginxServerName("[2001:db8::10]")).toBe("[2001:db8::10]");
+  });
+});
+
+describe("canonicalizeDomainHostname", () => {
+  it("lowercases domain names", () => {
+    expect(canonicalizeDomainHostname("ExAmPle.COM")).toBe("example.com");
+  });
+
+  it("converts IDNs to punycode", () => {
+    expect(canonicalizeDomainHostname("пример.рф")).toBe("xn--e1afmkfd.xn--p1ai");
+  });
+
+  it("keeps IP addresses unchanged", () => {
+    expect(canonicalizeDomainHostname("203.0.113.10")).toBe("203.0.113.10");
   });
 });
 
