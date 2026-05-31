@@ -104,6 +104,7 @@ async function seedBundledDirectory(
 
     if (
       relativePath === "caddy/install-caddy.sh" ||
+      relativePath === "caddy/uninstall-caddy.sh" ||
       relativePath === "caddy/sites/Caddyfile" ||
       relativePath === "nginx/http.conf" ||
       relativePath === "nginx/https.conf" ||

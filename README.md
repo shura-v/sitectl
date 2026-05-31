@@ -297,6 +297,7 @@ place, restarts services, or performs any other server-side steps it needs.
   - `SSH`
 - `Manage caddy`
   - `Install Caddy`
+  - `Uninstall Caddy`
   - `Add site`
   - `Open Caddyfile`
   - `Copy conf files to server`
@@ -400,6 +401,9 @@ What those actions do:
 - `Install Caddy`
   Installs the official Caddy Debian/Ubuntu package on the selected server and
   ensures the `caddy` service is enabled and started.
+- `Uninstall Caddy`
+  Removes `Caddy`, Caddy configs, Caddy-managed certificates, and Caddy data
+  directories from the selected server.
 - `Add site`
   Creates `~/.config/sitectl/caddy/sites/<host>/` and seeds `Caddyfile`
   from `~/.config/sitectl/caddy/sites/Caddyfile`.

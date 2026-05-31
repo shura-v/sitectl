@@ -4,9 +4,11 @@ import { runCopyCaddyConfFilesToServerAction } from "./copy-conf-files-to-server
 import { runInstallCaddyAction } from "./install-caddy.js";
 import { runOpenCaddyfileAction } from "./open-caddyfile.js";
 import { runRemoveCaddySiteFromServerAction } from "./remove-site-from-server.js";
+import { runUninstallCaddyAction } from "./uninstall-caddy.js";
 
 type ManageCaddyAction =
   | "install-caddy"
+  | "uninstall-caddy"
   | "add-site"
   | "open-caddyfile"
   | "copy-conf-files-to-server"
@@ -24,6 +26,11 @@ export async function runManageCaddyCommand(): Promise<void> {
             value: "install-caddy",
             label: "Install Caddy",
             hint: "Install the official Caddy package on a server"
+          },
+          {
+            value: "uninstall-caddy",
+            label: "Uninstall Caddy",
+            hint: "Remove Caddy, Caddy configs, certificates, and data from a server"
           },
           {
             value: "add-site",
@@ -69,6 +76,9 @@ export async function runManageCaddyCommand(): Promise<void> {
       switch (action) {
         case "install-caddy":
           await runInstallCaddyAction();
+          break;
+        case "uninstall-caddy":
+          await runUninstallCaddyAction();
           break;
         case "add-site":
           await runAddCaddySiteAction();
