@@ -128,7 +128,7 @@ The non-interactive commands are:
 - `sitectl init`
 - `sitectl init --overwrite-bundled`
 - `sitectl run <command> <server_name>`
-- `sitectl install` (install or update remote commands from a Git repository)
+- `sitectl install [repository-url]` (install or update remote commands from a Git repository)
 - `sitectl ssh`
 - `sitectl ssh <server-name>`
 - `sitectl ssh <server-name> '<full remote command string>'`

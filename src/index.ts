@@ -55,14 +55,14 @@ async function main(): Promise<void> {
 
   intro(`sitectl v${version}`);
 
-  if (args.length === 1 && args[0] === "install") {
-    await runInstallCommand();
+  if ((args.length === 1 || args.length === 2) && args[0] === "install") {
+    await runInstallCommand(args[1]);
     return;
   }
 
   if (args.length > 0) {
     cancelWithMessage(
-      'Unknown command. Use "sitectl init [--overwrite-bundled]", "sitectl ssh [server-name] [command-string]", "sitectl ssh-copy-id", "sitectl run <command> <server_name>", "sitectl install" or run without arguments.'
+      'Unknown command. Use "sitectl init [--overwrite-bundled]", "sitectl ssh [server-name] [command-string]", "sitectl ssh-copy-id", "sitectl run <command> <server_name>", "sitectl install [repository-url]" or run without arguments.'
     );
   }
 

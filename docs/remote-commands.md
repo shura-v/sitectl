@@ -176,10 +176,11 @@ commands shared in a Git repository:
 
 ```bash
 sitectl install
+sitectl install https://github.com/shura-v/sitectl-extensions.git
 ```
 
-1. Enter a repository URL (HTTPS or SSH). `sitectl` clones it with your local
-   `git` credentials.
+1. Pass a repository URL (HTTPS or SSH) or enter it when prompted. `sitectl`
+   clones it with your local `git` credentials.
 2. Select which top-level entries from the repository's `remote/` directory to
    install.
 3. Selected entries are copied into `~/.config/sitectl/remote/`.

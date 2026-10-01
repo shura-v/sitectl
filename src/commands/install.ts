@@ -7,11 +7,13 @@ import { getDataPath } from "../assets.js";
 import { FriendlyMessageError, promptConfirm, promptMultiselect, promptText } from "../cli.js";
 import { discoverRemoteMenuEntriesInDirectory, type RemoteMenuEntry } from "./remote-commands.js";
 
-export async function runInstallCommand(): Promise<void> {
-  const url = await promptText({
-    message: "Git repository URL (https or ssh)",
-    validate: (value) => (value.trim().length === 0 ? "Value is required." : undefined)
-  });
+export async function runInstallCommand(repositoryUrl?: string): Promise<void> {
+  const url =
+    repositoryUrl ??
+    (await promptText({
+      message: "Git repository URL (https or ssh)",
+      validate: (value) => (value.trim().length === 0 ? "Value is required." : undefined)
+    }));
   const cloneDirectory = await mkdtemp(join(tmpdir(), "sitectl-install-"));
 
   try {
