@@ -168,3 +168,26 @@ Upload example:
 
 That command can then use a remote shell script that moves the uploaded file into
 place, restarts services, or performs any other server-side steps it needs.
+
+## Installing From Git
+
+`sitectl install` (or `Install remote commands` in the main menu) installs remote
+commands shared in a Git repository:
+
+```bash
+sitectl install
+sitectl install https://github.com/shura-v/sitectl-extensions.git
+```
+
+1. Pass a repository URL (HTTPS or SSH) or enter it when prompted. `sitectl`
+   clones it with your local `git` credentials.
+2. Select which top-level entries from the repository's `remote/` directory to
+   install.
+3. Selected entries are copied into `~/.config/sitectl/remote/`.
+
+The repository must contain a `remote/` directory that follows the same layout
+as `~/.config/sitectl/remote/`.
+
+Run the same command again to update an entry. Installed entries with the same
+name are replaced entirely after a confirmation prompt, so keep local edits in
+your own repository.
