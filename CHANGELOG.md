@@ -1,5 +1,11 @@
 # sitectl
 
+## 0.6.0
+
+### Minor Changes
+
+- 82d713f: Add `sitectl install` to install or update remote commands from a Git repository.
+
 ## 0.5.0
 
 ### Minor Changes
