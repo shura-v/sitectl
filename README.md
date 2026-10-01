@@ -35,6 +35,8 @@ With `sitectl`, you can:
   Manages nginx site configs, certificate issuance, and HTTP/HTTPS switching.
 - `Remote commands`
   Runs built-in and custom server-side commands on a selected server.
+- `Install remote commands`
+  Installs or updates remote commands from a Git repository.
 
 It is opinionated, but customizable:
 - today it is biased toward Debian-like servers because the bootstrap/install
@@ -126,6 +128,7 @@ The non-interactive commands are:
 - `sitectl init`
 - `sitectl init --overwrite-bundled`
 - `sitectl run <command> <server_name>`
+- `sitectl install` (install or update remote commands from a Git repository)
 - `sitectl ssh`
 - `sitectl ssh <server-name>`
 - `sitectl ssh <server-name> '<full remote command string>'`

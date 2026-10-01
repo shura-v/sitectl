@@ -4,6 +4,7 @@ import { isPromptCancelledError, promptSelect } from "../cli.js";
 import { runManageCaddyCommand } from "./manage-caddy/index.js";
 import { getConfigPath } from "../config.js";
 import { runManageServersFlow } from "./manage-servers/index.js";
+import { runInstallCommand } from "./install.js";
 import { runRemoteCommandsFlow } from "./remote-commands.js";
 import { runManageSitesCommand } from "./manage-sites/index.js";
 import { runOpenDataDirCommand } from "./open-data-dir.js";
@@ -12,6 +13,7 @@ type CommandId =
   | "manage-servers"
   | "manage-caddy"
   | "remote-commands"
+  | "install-remote-commands"
   | "open-data-dir"
   | "manage-sites"
   | "exit";
@@ -47,6 +49,12 @@ const commandDefinitions: CommandDefinition[] = [
     label: "Remote commands",
     hint: "Run server-side automation commands against a selected server",
     run: runRemoteCommandsFlow
+  },
+  {
+    id: "install-remote-commands",
+    label: "Install remote commands",
+    hint: "Install or update remote commands from a Git repository",
+    run: runInstallCommand
   },
   {
     id: "open-data-dir",
