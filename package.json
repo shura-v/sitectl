@@ -1,6 +1,6 @@
 {
   "name": "sitectl",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "author": "Shura Vlasov",
   "description": "CLI toolkit for site operations.",
   "license": "MIT",

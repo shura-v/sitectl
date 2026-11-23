@@ -1,5 +1,11 @@
 # sitectl
 
+## 0.6.1
+
+### Patch Changes
+
+- a38b323: Preserve locally modified package configuration files when reinstalling Caddy. Copying a site now requires an existing Caddy installation and Caddyfile. The command validates the configuration before reloading an active service and leaves an inactive service stopped.
+
 ## 0.6.0
 
 ### Minor Changes
