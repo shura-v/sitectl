@@ -47,7 +47,7 @@ export async function runManageCaddyCommand(): Promise<void> {
           {
             value: "copy-conf-files-to-server",
             label: "Copy conf files to server",
-            hint: "Upload a site Caddyfile and reload Caddy"
+            hint: "Upload and validate a site Caddyfile; reload Caddy if active"
           },
           {
             value: "list-cert-paths",
